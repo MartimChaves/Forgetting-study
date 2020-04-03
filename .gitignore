@@ -1,0 +1,12 @@
+*.mat
+*.npz
+*.pth
+*.png
+*.npy
+datasets/svhn/data/*
+datasets/cifar100/data/*
+datasets/cifar10/data/cifar-10-batches-py/*
+datasets/svhn/data/test_32x32.mat
+datasets/cifar100/data/train
+datasets/cifar100/data/test
+datasets/svhn/data/train_32x32.mat
