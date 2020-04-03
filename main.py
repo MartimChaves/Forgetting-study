@@ -288,16 +288,19 @@ def main(args):
         
     # data needed for second stage
     scd_stg_data = {
-        'track_old_data_batchWise':True, # indicate the need to track data from first stage
-        'train_loader_cifar':first_stage_train_loader, # first stage data
-        'loss_per_epoch_train':loss_per_epoch_train, # list to which info is appended to
-        'fixed_last_layer':True, # use second head for second stage data
-        'noisy_labels':noisy_labels        
+        'track_old_data_batchWise': True, # indicate the need to track data from first stage
+        'train_loader_cifar': first_stage_train_loader, # first stage data
+        'loss_per_epoch_train': loss_per_epoch_train, # list to which info is appended to
+        'fixed_last_layer': True, # use second head for second stage data
+        'noisy_labels': noisy_labels, # used to calculate AUC and get loss/CE when AUC is the highest
+        'highest_auc_loss': highest_auc_loss, # last array will correspond to the loss when the auc was highest 
+        'highest_auc_ce': highest_auc_ce, # equivalent to previous but wrt CE
+        'second_stage_CE_track': second_stage_CE_track # track CE throughout the second stage
     }     
         
     for epoch in range(1, args.epoch_2nd + 1):
         
-        if args.track_CE:
+        if args.track_CE and args.save_best_AUC_model:
             _, _, _, _ = train_CrossEntropy(args, model, device, second_stage_train_loader, optimizer, epoch, # pylint:disable=undefined-variable  
                                 track_old_data_batchWise=True, train_loader_cifar=first_stage_train_loader,
                                 loss_per_epoch_train=loss_per_epoch_train, fixed_last_layer=True,
@@ -307,8 +310,7 @@ def main(args):
         else:
             _, _, _, _ = train_CrossEntropy(args, model, device, second_stage_train_loader, optimizer, epoch, # pylint:disable=undefined-variable  
                                             track_old_data_batchWise=True, train_loader_cifar=first_stage_train_loader,
-                                            loss_per_epoch_train=loss_per_epoch_train, fixed_last_layer=True,
-                                            noisy_labels=noisy_labels,highest_auc_loss=highest_auc_loss) 
+                                            loss_per_epoch_train=loss_per_epoch_train, fixed_last_layer=True) 
 
         # if args.relearn1st_in2nd and epoch >= args.unfreeze_secondStage:
             
@@ -328,7 +330,7 @@ def main(args):
         ce_tr = np.asarray(second_stage_CE_track)
         ce_tr_t = np.transpose(ce_tr)
     
-    # Plot titles and lables (readibility purposes)
+    # Plot's titles and lables (for readibility purposes)
     xlabel_name = 'Step'
     
     if args.second_stage_subset:

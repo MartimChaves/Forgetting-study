@@ -173,7 +173,8 @@ def train_CrossEntropy(args, model, device, train_loader, optimizer, epoch, \
                         track_old_data_batchWise=False, train_loader_cifar='', \
                         loss_per_epoch_train='',neighbour_CE_per_epoch_train='',neighbour_H_per_epoch_train='',\
                         fixed_last_layer=False,noisy_labels='',highest_auc_model='',highest_auc_loss='',\
-                        num_classes=10,index_list=''):
+                        num_classes=10):
+    
     batch_time = AverageMeter()
     train_loss = AverageMeter()
     top1 = AverageMeter()
@@ -227,9 +228,6 @@ def train_CrossEntropy(args, model, device, train_loader, optimizer, epoch, \
         numb_labels = len(np.unique(labels))
         images, labels, soft_labels, index = images.to(device), labels.to(device), soft_labels.to(device), index.to(device)
 
-        if type(index_list) == list and epoch == 1:
-            index_list.extend(index.cpu().detach().numpy().tolist())
-        
         # compute output
         if fixed_last_layer:
             

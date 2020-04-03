@@ -212,14 +212,12 @@ def main(args):
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.M, gamma=args.gamma_scheduler)
     
-    index_list=[]
-    
     for epoch in range(1,args.epoch_1st+1):
         
         # train model
         loss_per_epoch, top_5_train_ac, top1_train_ac, train_time = train_CrossEntropy(args, model, device,
                                                                                     first_stage_train_loader, optimizer, epoch,
-                                                                                    num_classes=args.first_stage_num_classes,index_list=index_list)
+                                                                                    num_classes=args.first_stage_num_classes)
 
         # track training data
         epoch_losses_train = track_training_loss_plus(args, model, device, first_stage_train_loader, epoch)
@@ -233,7 +231,6 @@ def main(args):
         acc_val_per_epoch += acc_val_per_epoch_i
         
     torch.save(model.state_dict(), model_1st_path)
-    index_list = np.array(index_list)
     
     # update noisy_labels
     new_noisy_indexs = np.where((clean_labels!=first_stage_train_loader.dataset.labels))[0]#==True)
@@ -278,10 +275,9 @@ def main(args):
     n = round(len(final_loss)*0.2)#.astype(np.uint8)
     
     sorted_indxs_measure = np.argsort(final_loss)
-    #index_list_sorted = index_list[sorted_indxs_measure]
     
-    idx_highest = sorted_indxs_measure[-n:] #index_list_sorted[-n:]
-    idx_lowest = sorted_indxs_measure[:n] #index_list_sorted[:n]
+    idx_highest = sorted_indxs_measure[-n:]
+    idx_lowest = sorted_indxs_measure[:n] 
     
     # calculate % of noisy samples with those indices
     noisy_in_high_loss = np.isin(idx_highest,noisy_indexes)
