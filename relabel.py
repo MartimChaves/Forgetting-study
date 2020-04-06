@@ -233,10 +233,6 @@ def main(args):
     torch.save(model.state_dict(), model_1st_path)
     
     # update noisy_labels
-    new_noisy_indexs = np.where((clean_labels!=first_stage_train_loader.dataset.labels))[0]#==True)
-    noisy_indxs_overlap = np.isin(new_noisy_indexs,noisy_indexes)
-    valid_noisy_indexes = new_noisy_indexs[noisy_indxs_overlap == True]
-    noisy_indexes = new_noisy_indexs
     
     loss_tr = np.asarray(loss_per_epoch_train_1st)
     loss_tr_t = np.transpose(loss_tr)
@@ -288,10 +284,10 @@ def main(args):
     val, amount_clean_in_LoLoss = np.unique(clean_in_low_loss,return_counts=True)
     percent_clean_in_LoLoss = round(amount_clean_in_LoLoss[0]/np.sum(amount_clean_in_LoLoss),2)
       
-    percent_sim_in_HiLoss, best_case_HL = calc_sim_indxs(idx_highest,forget_auc_arr[0],noisy_indexes,valid_noisy_indexes)
-    percent_sim_in_LoLoss, best_case_LL = calc_sim_indxs(idx_lowest,forget_auc_arr[1],noisy_indexes,valid_noisy_indexes,noisy=False)
-    percent_sim_in_HiCE, best_case_HC  = calc_sim_indxs(idx_highest,forget_auc_arr[2],noisy_indexes,valid_noisy_indexes)
-    percent_sim_in_LoCE, best_case_LC = calc_sim_indxs(idx_lowest,forget_auc_arr[3],noisy_indexes,valid_noisy_indexes,noisy=False)
+    percent_sim_in_HiLoss, best_case_HL = calc_sim_indxs(idx_highest,forget_auc_arr[0],noisy_indexes)
+    percent_sim_in_LoLoss, best_case_LL = calc_sim_indxs(idx_lowest,forget_auc_arr[1],noisy_indexes,noisy=False)
+    percent_sim_in_HiCE, best_case_HC  = calc_sim_indxs(idx_highest,forget_auc_arr[2],noisy_indexes)
+    percent_sim_in_LoCE, best_case_LC = calc_sim_indxs(idx_lowest,forget_auc_arr[3],noisy_indexes,noisy=False)
     
     # Loss histogram with info
     bins = np.linspace(np.min(final_loss), np.max(final_loss), 60)
@@ -312,7 +308,7 @@ def main(args):
     plt.savefig("relabel_compare/" + auc_name + '_relabel.png', dpi = 150)
     plt.close()
     
-def calc_sim_indxs(arr1,arr2,noisy_indexes,valid_noisy_indexes,noisy=True):
+def calc_sim_indxs(arr1,arr2,noisy_indexes,noisy=True):
     # arr1 = arr1[arr1.argsort()]
     # idx = np.searchsorted(arr1,arr2)
     # idx[idx==len(arr1)] = 0
