@@ -26,7 +26,7 @@ def get_dataset(root,noise_type,subset,noise_ratio,transform_train, transform_te
         
     testset = Cifar100(root,subset,noise_ratio,train=False,transform=transform_train)
     cifar_train.labels = np.asarray(cifar_train.labels, dtype=np.long)
-    #cifar_train.labelsNoisyOriginal = cifar_train.labels.copy()
+    cifar_train.labelsNoisyOriginal = cifar_train.labels.copy()
     
     return cifar_train, testset, cifar_train.clean_labels, cifar_train.noisy_indexes
 
@@ -73,6 +73,7 @@ class Cifar100(tv.datasets.CIFAR100):
 
     def __getitem__(self, index):
         label = self.labels[index] #self.data['fine_labels'.encode()][index]
+        originalNoisyLabel = self.labelsNoisyOriginal[index]
         r = self.train[index, :1024].reshape(32, 32) #self.data['data'.encode()][index, :1024].reshape(32, 32)
         g = self.train[index, 1024:2048].reshape(32, 32) #self.data['data'.encode()][index, 1024:2048].reshape(32, 32)
         b = self.train[index, 2048:].reshape(32, 32) #self.data['data'.encode()][index, 2048:].reshape(32, 32)
@@ -83,7 +84,7 @@ class Cifar100(tv.datasets.CIFAR100):
             image = self.transform(image)
             
         if self.trainOrTest:
-            return image, label, self.soft_labels[index], index, label, 0, 0 #label is repeated to fit with rest of the code
+            return image, label, self.soft_labels[index], index, originalNoisyLabel, 0, 0 #label is repeated to fit with rest of the code
         else:
             return image, label
         

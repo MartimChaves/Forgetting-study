@@ -21,40 +21,40 @@ def parse_args():
     parser.add_argument('--cuda_dev', type=int, default=0, help='GPU to select')
     
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
-    parser.add_argument('--lr_2nd', type=float, default=0.001, help='learning rate 2nd stage')
+    parser.add_argument('--lr_2nd', type=float, default=0.1, help='learning rate 2nd stage')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--gamma_scheduler', default=0.1, type=float, help='Value to decay the learning rate')
     parser.add_argument('--M', action='append', type=int, default=[], help="Milestones for the LR sheduler")
-    parser.add_argument('--M_2nd', action='append', type=int, default=[], help="Milestones for the LR sheduler for the second stage of training")
+    parser.add_argument('--M_2nd', action='append', type=int, default=[5,10], help="Milestones for the LR sheduler for the second stage of training")
     
     parser.add_argument('--batch_size', type=int, default=100, help='#images in each mini-batch')
     parser.add_argument('--test_batch_size', type=int, default=100, help='#images in each mini-batch')
     
-    parser.add_argument('--epoch_1st', type=int, default=1, help='training epoches for the 1st stage')
-    parser.add_argument('--epoch_2nd', type=int, default=1, help='training epoches for the 2nd stage')
+    parser.add_argument('--epoch_1st', type=int, default=200, help='training epoches for the 1st stage')
+    parser.add_argument('--epoch_2nd', type=int, default=11, help='training epoches for the 2nd stage')
     
-    parser.add_argument('--first_stage_num_classes', type=int, default=6, help='number of classes for the first stage of training')
+    parser.add_argument('--first_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
     parser.add_argument('--first_stage_noise_ration', type=float, default=0.4, help='noise ratio for the first stage of training')
     parser.add_argument('--first_stage_noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--first_stage_data_name', type=str, default='cifar10', help='Dataset to use in the first stage of model training')
     parser.add_argument('--first_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     
-    parser.add_argument('--second_stage_num_classes', type=int, default=4, help='number of classes for the first stage of training')
+    parser.add_argument('--second_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
     parser.add_argument('--second_stage_noise_ration', type=float, default=0.0, help='noise ratio for the first stage of training')
     parser.add_argument('--second_stage_noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
-    parser.add_argument('--second_stage_data_name', type=str, default='cifar10', help='Dataset to use in the first stage of model training')
+    parser.add_argument('--second_stage_data_name', type=str, default='svhn', help='Dataset to use in the first stage of model training')
     parser.add_argument('--second_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     
-    parser.add_argument('--unfreeze_secondStage', type=int, default=10, help='Step/epoch at which models inner layers are set to not frozen')
-    parser.add_argument('--freeze_epochWise', dest='freeze_epochWise', default=False, action='store_true', help='if true, inner layers are frozen for the duration of epochs')
-    parser.add_argument('--freeze_earlySecondStage', dest='freeze_earlySecondStage', default=False, action='store_true', help='if true, for the first steps in second stage, inner layers of model are frozen')
+    parser.add_argument('--unfreeze_secondStage', type=int, default=11, help='Step/epoch at which models inner layers are set to not frozen')
+    parser.add_argument('--freeze_epochWise', dest='freeze_epochWise', default=True, action='store_true', help='if true, inner layers are frozen for the duration of epochs')
+    parser.add_argument('--freeze_earlySecondStage', dest='freeze_earlySecondStage', default=True, action='store_true', help='if true, for the first steps in second stage, inner layers of model are frozen')
     parser.add_argument('--batch_eval_preUnfreeze_only', dest='batch_eval_preUnfreeze_only', default=False, action='store_true', help='if true, batch norm will not be set to eval in second stage')
     
     parser.add_argument('--save_best_AUC_model', dest='save_best_AUC_model', default=False, action='store_true', help='if true, measure AUC after tracking and save model for best AUC')
     parser.add_argument('--track_CE', dest='track_CE', default=False, action='store_true', help='if true, track CE')
     
-    parser.add_argument('--second_stg_max_median_loss', type=int, default=15, help='First stage data loss when retraining maximum median loss - after that point, training is alted')
-    parser.add_argument('--step_number', type=int, default=2, help='number of steps')
+    parser.add_argument('--second_stg_max_median_loss', type=int, default=1500, help='First stage data loss when retraining maximum median loss - after that point, training is alted')
+    parser.add_argument('--step_number', type=int, default=16, help='number of steps')
     
     parser.add_argument('--seed', type=int, default=42, help='seed for replicability (default: 42)')
     
