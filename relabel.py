@@ -36,8 +36,8 @@ def parse_args():
     parser.add_argument('--first_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
     parser.add_argument('--first_stage_noise_ration', type=float, default=0.4, help='noise ratio for the first stage of training')
     parser.add_argument('--first_stage_noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
-    parser.add_argument('--first_stage_data_name', type=str, default='cifar100', help='Dataset to use in the first stage of model training')
-    parser.add_argument('--first_stage_subset', nargs='+', type=int, default=[2,14,23,35,48,51,69,74,87,90], help='Classes of dataset to use as subset')
+    parser.add_argument('--first_stage_data_name', type=str, default='cifar10', help='Dataset to use in the first stage of model training')
+    parser.add_argument('--first_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     
     parser.add_argument('--reg_term1', type=float, default=0.8, help='alpha hyperparameter for regularization component Lp (relabeling)')
     parser.add_argument('--reg_term2', type=float, default=0.4, help='beta hyperparameter for regularization component Le (relabeling)')
