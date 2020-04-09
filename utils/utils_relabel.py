@@ -79,7 +79,7 @@ def track_training_loss_plus(args, model, device, train_loader, epoch, fixed_las
         all_losses = torch.zeros(all_losses_t.size())
         all_losses[all_index.cpu()] = all_losses_t.data.cpu()
         
-        if fixed_last_layer and args.track_CE: # testset is not ready
+        if fixed_last_layer and args.track_CE: # 
             #CE
             all_pred_reordered = torch.zeros(all_pred.size())
             all_pred_reordered[all_index.cpu()] = all_pred.data.cpu()
@@ -169,11 +169,7 @@ def test_cleaning(args, model, device, test_loader):
 
     return (loss_per_epoch, acc_val_per_epoch)
 
-def train_CrossEntropy(args, model, device, train_loader, optimizer, epoch, \
-                        track_old_data_batchWise=False, train_loader_cifar='', \
-                        loss_per_epoch_train='',neighbour_CE_per_epoch_train='',neighbour_H_per_epoch_train='',\
-                        fixed_last_layer=False,noisy_labels='',highest_auc_model='',highest_auc_loss='',\
-                        num_classes=10):
+def train_CrossEntropy(args, model, device, train_loader, optimizer, epoch, num_classes=10):
     
     batch_time = AverageMeter()
     train_loss = AverageMeter()
@@ -202,52 +198,22 @@ def train_CrossEntropy(args, model, device, train_loader, optimizer, epoch, \
         if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
             module.eval()
             
-    set_auc_values = False
-    
     results = np.zeros((len(train_loader.dataset), num_classes), dtype=np.float32)
+    
     for batch_idx, (images, labels, soft_labels, index, _, rot_img, rot_labels) in enumerate(train_loader):
         model.train()
             
         #embed()
-        
-        if args.freeze_epochWise:
-            freeze_counter = epoch
-        else:
-            freeze_counter = counter
-        
-        if fixed_last_layer: # in order to not update batch_norm
-            if args.batch_eval_preUnfreeze_only:
-                if freeze_counter < args.unfreeze_secondStage:
-                    model.apply(set_bn_eval)
-                else:
-                    model.train()
-            else:
-                model.apply(set_bn_eval)
         
         # prepare variables
         numb_labels = len(np.unique(labels))
         images, labels, soft_labels, index = images.to(device), labels.to(device), soft_labels.to(device), index.to(device)
 
         # compute output
-        if fixed_last_layer:
-            
-            if epoch==1 and counter == 1 and args.freeze_earlySecondStage: #and freeze_counter < args.unfreeze_secondStage:
-                #print("Freezing models inner layers")
-                freeze_model(model)
-                model.linear_2.weight.requires_grad = True
-                model.linear_2.bias.requires_grad = True
-                
-            if args.freeze_earlySecondStage and freeze_counter == args.unfreeze_secondStage:
-                #print("Unfreezing the model.")
-                unfreeze_model(model)
-                
-            out = model.forward_features(images) 
-            outputs = model.forward_supervised_2(out)
-        else:
-            outputs = model(images)
+        outputs = model(images)
         
         # compute loss
-        if epoch < args.warmup_e:
+        if epoch < args.warmup_e and args.ce_loss_inWarmup:
             prob, loss, _ = CE_loss(outputs, labels, device, args, criterion)
         else:
             prob, loss = joint_opt_loss(outputs, soft_labels, device, args, num_classes, epoch)
@@ -257,7 +223,7 @@ def train_CrossEntropy(args, model, device, train_loader, optimizer, epoch, \
         optimizer.step()
         optimizer.zero_grad()
         
-        if not fixed_last_layer or numb_labels==5:
+        if numb_labels>=5:
             max_size_acc = 5
         else:
             max_size_acc = 4
@@ -278,61 +244,6 @@ def train_CrossEntropy(args, model, device, train_loader, optimizer, epoch, \
                 prec1, optimizer.param_groups[0]['lr']))
         
         results[index.cpu().detach().numpy().tolist()] = prob.cpu().detach().numpy().tolist()
-        
-        if track_old_data_batchWise:
-            
-            if args.save_best_AUC_model and not set_auc_values:
-                set_auc_values = True
-                best_auc = -1
-                #highest_auc_loss = []
-            
-            if args.freeze_earlySecondStage and args.freeze_epochWise:
-            
-                if epoch == args.unfreeze_secondStage:
-                
-                    epoch_losses_train = track_training_loss_plus(args, model, device, train_loader_cifar, epoch,fixed_last_layer=fixed_last_layer)
-                    
-                    loss_per_epoch_train.append(epoch_losses_train)
-                    
-                    print("Current step counter: " + str(counter))
-                    print("Current step Loss: " + str(epoch_losses_train.mean(axis=0)))
-                    
-                    # measure auc; if highest -> save model
-                    if args.save_best_AUC_model:
-                        fpr, tpr, _ = roc_curve(noisy_labels, epoch_losses_train)                        
-                        current_auc = auc(fpr, tpr)
-                        
-                        if current_auc > best_auc:
-                            highest_auc_model = model
-                            best_auc = current_auc
-                            highest_auc_loss = epoch_losses_train
-                            
-                    # if training epoch wise, then step_number must be very high (unachievable) 
-                    if counter - 1 > args.step_number or epoch_losses_train.mean(axis=0) > args.second_stg_max_median_loss:
-                        break
-                    
-            else:
-                
-                epoch_losses_train  = track_training_loss_plus(args, model, device, train_loader_cifar, epoch,fixed_last_layer=fixed_last_layer)
-                    
-                loss_per_epoch_train.append(epoch_losses_train)
-                
-                print("Current step counter: " + str(counter))
-                print("Current step Loss: " + str(epoch_losses_train.mean(axis=0)))
-                
-                # measure auc; if highest -> save model
-                if args.save_best_AUC_model:
-                    fpr, tpr, _ = roc_curve(noisy_labels, epoch_losses_train)                        
-                    current_auc = auc(fpr, tpr)
-                    
-                    if current_auc > best_auc:
-                        highest_auc_model = model
-                        best_auc = current_auc
-                        #highest_auc_loss = []
-                        highest_auc_loss.append(epoch_losses_train)
-                
-                if counter - 1 > args.step_number or epoch_losses_train.mean(axis=0) > args.second_stg_max_median_loss:
-                    break
                 
         counter = counter + 1
     

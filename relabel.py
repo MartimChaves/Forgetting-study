@@ -41,32 +41,22 @@ def parse_args():
     
     parser.add_argument('--reg_term1', type=float, default=0.8, help='alpha hyperparameter for regularization component Lp (relabeling)')
     parser.add_argument('--reg_term2', type=float, default=0.4, help='beta hyperparameter for regularization component Le (relabeling)')
-    
+    parser.add_argument('--compare_to_forgetting', dest='compare_to_forgetting', default=False, action='store_true', help='if true, compare results to forgetting method results')
+    parser.add_argument('--ce_loss_inWarmup', dest='ce_loss_inWarmup', default=False, action='store_true', help='if true, during the warmup epochs use regular cross entropy loss')
+
     parser.add_argument('--second_stage_num_classes', type=int, default=4, help='number of classes for the first stage of training')
     parser.add_argument('--second_stage_noise_ration', type=float, default=0.0, help='noise ratio for the first stage of training')
     parser.add_argument('--second_stage_noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--second_stage_data_name', type=str, default='cifar100', help='Dataset to use in the first stage of model training')
     parser.add_argument('--second_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     
-    parser.add_argument('--unfreeze_secondStage', type=int, default=10, help='Step/epoch at which models inner layers are set to not frozen')
-    parser.add_argument('--freeze_epochWise', dest='freeze_epochWise', default=False, action='store_true', help='if true, inner layers are frozen for the duration of epochs')
-    parser.add_argument('--freeze_earlySecondStage', dest='freeze_earlySecondStage', default=False, action='store_true', help='if true, for the first steps in second stage, inner layers of model are frozen')
-    parser.add_argument('--batch_eval_preUnfreeze_only', dest='batch_eval_preUnfreeze_only', default=False, action='store_true', help='if true, batch norm will not be set to eval in second stage')
-    
-    parser.add_argument('--save_best_AUC_model', dest='save_best_AUC_model', default=False, action='store_true', help='if true, measure AUC after tracking and save model for best AUC')
     parser.add_argument('--track_CE', dest='track_CE', default=False, action='store_true', help='if true, track CE')
-    
-    parser.add_argument('--second_stg_max_median_loss', type=int, default=10, help='First stage data loss when retraining maximum median loss - after that point, training is alted')
-    parser.add_argument('--step_number', type=int, default=1, help='number of steps')
     
     parser.add_argument('--seed', type=int, default=42, help='seed for replicability (default: 42)')
     
     parser.add_argument('--train_root', default='./data', help='root for train data')
     
     parser.add_argument('--experiment_name', type=str, default = 'test6',help='name of the experiment (for the output files)')
-    
-    parser.add_argument('--relearn1st_in2nd', dest='relearn1st_in2nd', default=False, action='store_true', help='Re-learn when in 2nd stage using first stage data')
-    parser.add_argument('--relearn_freq', type=int, default=2, help='Frequency of training with 1st stage data when in 2nd stage (2=every 2 epochs, train 1 epoch with 1st stage data)')
     
     parser.add_argument('--NN_k', type=int, default=100, help='Number of neighbours to consider in the LOF computation')
     parser.add_argument('--warmup_e', type=int, default=2, help='Number of warmup epochs.')
@@ -168,8 +158,6 @@ def data_config(data_name, first_stage = True):
 
 def main(args):
     
-    print("Hello! ", args.freeze_earlySecondStage, " ", args.freeze_epochWise," ",args.relearn1st_in2nd," ",args.first_stage_noise_type)
-        
     # variable initialization 
     acc_train_per_epoch = []
     acc_val_per_epoch = []
@@ -263,50 +251,51 @@ def main(args):
     fig3.savefig(args.experiment_name + '_accuracy.png', dpi = 150)
     plt.close()
     
-    auc_name = args.first_stage_data_name + '_' + args.first_stage_noise_type
-    forget_auc_arr = np.load("relabel_compare/" + auc_name + ".npy", allow_pickle=True)
-    
-    final_loss = loss_per_epoch_train_1st[-1]
-    
-    n = round(len(final_loss)*0.2)#.astype(np.uint8)
-    
-    sorted_indxs_measure = np.argsort(final_loss)
-    
-    idx_highest = sorted_indxs_measure[-n:]
-    idx_lowest = sorted_indxs_measure[:n] 
-    
-    # calculate % of noisy samples with those indices
-    noisy_in_high_loss = np.isin(idx_highest,noisy_indexes)
-    val, amount_noisy_in_HiLoss = np.unique(noisy_in_high_loss,return_counts=True)
-    percent_noisy_in_HiLoss = round(amount_noisy_in_HiLoss[1]/np.sum(amount_noisy_in_HiLoss),2)
-    # calculate % of clean samples of 
-    clean_in_low_loss = np.isin(idx_lowest,noisy_indexes)
-    val, amount_clean_in_LoLoss = np.unique(clean_in_low_loss,return_counts=True)
-    percent_clean_in_LoLoss = round(amount_clean_in_LoLoss[0]/np.sum(amount_clean_in_LoLoss),2)
-      
-    percent_sim_in_HiLoss, best_case_HL = calc_sim_indxs(idx_highest,forget_auc_arr[0],noisy_indexes)
-    percent_sim_in_LoLoss, best_case_LL = calc_sim_indxs(idx_lowest,forget_auc_arr[1],noisy_indexes,noisy=False)
-    percent_sim_in_HiCE, best_case_HC  = calc_sim_indxs(idx_highest,forget_auc_arr[2],noisy_indexes)
-    percent_sim_in_LoCE, best_case_LC = calc_sim_indxs(idx_lowest,forget_auc_arr[3],noisy_indexes,noisy=False)
-    
-    # Loss histogram with info
-    bins = np.linspace(np.min(final_loss), np.max(final_loss), 60)
-    plt.hist(final_loss[noisy_labels == 0], bins, alpha=0.5, label='Clean')
-    plt.hist(final_loss[noisy_labels == 1], bins, alpha=0.5, label='Noisy')
-    plt.legend(loc='upper right')
-    plt.xlabel("Loss")
-    plt.ylabel("Number of samples")
-    plt.title("Loss histogram - Relabel method")
-    plt.figtext(.01,0.97,'noisy samples in 20% highest loss: {} %'.format(percent_noisy_in_HiLoss), fontsize=8, ha='left')
-    plt.figtext(.01,0.93,'clean samples in 20% lowest loss: {} %'.format(percent_clean_in_LoLoss), fontsize=8, ha='left')
-    plt.figtext(.01,0.01,'index sim to loss in 20% highest loss: {} % ({}%)'.format(percent_sim_in_HiLoss,best_case_HL), fontsize=8, ha='left')
-    plt.figtext(.01,0.04,'index sim to loss in 20% lowest loss: {} % ({}%)'.format(percent_sim_in_LoLoss,best_case_LL), fontsize=8, ha='left')
-    plt.figtext(.99,0.01,'index sim to CE in 20% highest loss: {} % ({}%)'.format(percent_sim_in_HiCE,best_case_HC), fontsize=8, ha='right')
-    plt.figtext(.99,0.04,'index sim to CE in 20% lowest loss: {} % ({}%)'.format(percent_sim_in_LoCE,best_case_LC), fontsize=8, ha='right')
-    #plt.show()
-    auc_name = args.first_stage_data_name + '_' + args.first_stage_noise_type
-    plt.savefig("relabel_compare/" + auc_name + '_relabel.png', dpi = 150)
-    plt.close()
+    if args.compare_to_forgetting:
+        auc_name = args.first_stage_data_name + '_' + args.first_stage_noise_type
+        forget_auc_arr = np.load("relabel_compare/" + auc_name + ".npy", allow_pickle=True)
+        
+        final_loss = loss_per_epoch_train_1st[-1]
+        
+        n = round(len(final_loss)*0.2)#.astype(np.uint8)
+        
+        sorted_indxs_measure = np.argsort(final_loss)
+        
+        idx_highest = sorted_indxs_measure[-n:]
+        idx_lowest = sorted_indxs_measure[:n] 
+        
+        # calculate % of noisy samples with those indices
+        noisy_in_high_loss = np.isin(idx_highest,noisy_indexes)
+        val, amount_noisy_in_HiLoss = np.unique(noisy_in_high_loss,return_counts=True)
+        percent_noisy_in_HiLoss = round(amount_noisy_in_HiLoss[1]/np.sum(amount_noisy_in_HiLoss),2)
+        # calculate % of clean samples of 
+        clean_in_low_loss = np.isin(idx_lowest,noisy_indexes)
+        val, amount_clean_in_LoLoss = np.unique(clean_in_low_loss,return_counts=True)
+        percent_clean_in_LoLoss = round(amount_clean_in_LoLoss[0]/np.sum(amount_clean_in_LoLoss),2)
+        
+        percent_sim_in_HiLoss, best_case_HL = calc_sim_indxs(idx_highest,forget_auc_arr[0],noisy_indexes)
+        percent_sim_in_LoLoss, best_case_LL = calc_sim_indxs(idx_lowest,forget_auc_arr[1],noisy_indexes,noisy=False)
+        percent_sim_in_HiCE, best_case_HC  = calc_sim_indxs(idx_highest,forget_auc_arr[2],noisy_indexes)
+        percent_sim_in_LoCE, best_case_LC = calc_sim_indxs(idx_lowest,forget_auc_arr[3],noisy_indexes,noisy=False)
+        
+        # Loss histogram with info
+        bins = np.linspace(np.min(final_loss), np.max(final_loss), 60)
+        plt.hist(final_loss[noisy_labels == 0], bins, alpha=0.5, label='Clean')
+        plt.hist(final_loss[noisy_labels == 1], bins, alpha=0.5, label='Noisy')
+        plt.legend(loc='upper right')
+        plt.xlabel("Loss")
+        plt.ylabel("Number of samples")
+        plt.title("Loss histogram - Relabel method")
+        plt.figtext(.01,0.97,'noisy samples in 20% highest loss: {} %'.format(percent_noisy_in_HiLoss), fontsize=8, ha='left')
+        plt.figtext(.01,0.93,'clean samples in 20% lowest loss: {} %'.format(percent_clean_in_LoLoss), fontsize=8, ha='left')
+        plt.figtext(.01,0.01,'index sim to loss in 20% highest loss: {} % ({}%)'.format(percent_sim_in_HiLoss,best_case_HL), fontsize=8, ha='left')
+        plt.figtext(.01,0.04,'index sim to loss in 20% lowest loss: {} % ({}%)'.format(percent_sim_in_LoLoss,best_case_LL), fontsize=8, ha='left')
+        plt.figtext(.99,0.01,'index sim to CE in 20% highest loss: {} % ({}%)'.format(percent_sim_in_HiCE,best_case_HC), fontsize=8, ha='right')
+        plt.figtext(.99,0.04,'index sim to CE in 20% lowest loss: {} % ({}%)'.format(percent_sim_in_LoCE,best_case_LC), fontsize=8, ha='right')
+        #plt.show()
+        auc_name = args.first_stage_data_name + '_' + args.first_stage_noise_type
+        plt.savefig("relabel_compare/" + auc_name + '_relabel.png', dpi = 150)
+        plt.close()
     
 def calc_sim_indxs(arr1,arr2,noisy_indexes,noisy=True):
     # arr1 = arr1[arr1.argsort()]
