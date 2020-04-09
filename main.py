@@ -148,7 +148,7 @@ def data_config(data_name, first_stage = True):
         transform_train, transform_test = data_augmentation_transforms(mean,std)
         
         os.chdir("./datasets/cifar100")
-        trainset, testset, clean_labels, noisy_indexes = get_cifar100_dataset(args.train_root,noise_type,subset,noise_ratio,transform_train, transform_test)
+        trainset, testset, clean_labels, noisy_indexes = get_cifar100_dataset(args,args.train_root,noise_type,subset,noise_ratio,transform_train, transform_test)
 
         train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
         test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, num_workers=0, pin_memory=True)

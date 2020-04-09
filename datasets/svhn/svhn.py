@@ -69,7 +69,6 @@ class svhnTrain(tv.datasets.SVHN):
 
     def symmetric_noise_for_semiSup(self):
         # to be more equal, every category can be processed separately
-        # np.random.seed(42)
         np.random.seed(self.args.seed) #seed)
 
         original_labels = np.copy(self.labels)

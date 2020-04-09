@@ -12,10 +12,10 @@ from IPython import embed
 
 import matplotlib.pyplot as plt
 
-def get_dataset(root,noise_type,subset,noise_ratio,transform_train, transform_test):
+def get_dataset(args,root,noise_type,subset,noise_ratio,transform_train, transform_test):
     
     #subset = [2,4,6,20,89]
-    cifar_train = Cifar100(root,subset,noise_ratio,train=True,transform=transform_train)
+    cifar_train = Cifar100(args,root,subset,noise_ratio,train=True,transform=transform_train)
     
     if noise_type == "random_in_noise":
         cifar_train.random_in_noise()
@@ -35,7 +35,10 @@ def get_dataset(root,noise_type,subset,noise_ratio,transform_train, transform_te
 
 class Cifar100(tv.datasets.CIFAR100):
         
-    def __init__(self, path, subset, noise_ratio,train=True,transform=None):
+    def __init__(self, args, path, subset, noise_ratio,train=True,transform=None):
+        
+        self.args = args
+        
         #if transform is given, we transoform data using
         if train:
             data_path = 'train'
@@ -91,7 +94,7 @@ class Cifar100(tv.datasets.CIFAR100):
     def random_in_noise(self):
 
         # to be more equal, every category can be processed separately
-        np.random.seed(42)#self.args.seed)
+        np.random.seed(self.args.seed)
         idxes = np.random.permutation(len(self.labels))
 
         noisy_indexes = idxes[0:self._num]

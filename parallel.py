@@ -114,11 +114,10 @@ def data_config(data_name, parallel):
         print("Cifar10 data loaded.")
                     
     else:
-        print("Dataset not recognized. Please chose between cifar10 and svhn datasets")
+        print("Dataset not recognized. Only the cifar10 dataset is available at the moment.")
         return -1
     
     return train_loader, test_loader, noisy_indexes, clean_labels
-
 
 def main(args):
     
