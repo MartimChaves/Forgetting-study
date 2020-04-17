@@ -177,8 +177,8 @@ class Cifar10Train(tv.datasets.CIFAR10):
         self.soft_labels = []
         self.labelsNoisyOriginal = []
         self._num = []
-        self._count = 1
-        self.prediction = []
+        self._count = 0
+        #self.prediction = []
         self.confusion_matrix_in = np.array([])
         self.confusion_matrix_out = np.array([])
         self.labeled_idx = []
@@ -200,17 +200,22 @@ class Cifar10Train(tv.datasets.CIFAR10):
                 self.data = subtrainset
                 self.labels = sublabelset
         
+        self.alpha = 0.6
+        self.Z_exp_labels = np.zeros((len(self.train_labels), 10), dtype=np.float32)
 
         self.gaus_noise = False
         self.pslab_transform = pslab_transform
 
         self.neighbour_labels = []
         self.training_pseudolabels = []
-        self.tracking_pseudolabels = []
 
         # From in ou split function:
         self.soft_labels = np.zeros((len(self.labels), 10), dtype=np.float32)
-        #self.prediction = np.zeros((self.args.epoch_update, len(self.data), self.num_classes), dtype=np.float32)
+        if self.args.epoch_update:
+            self.prediction = np.zeros((self.args.epoch_update, len(self.data), self.num_classes), dtype=np.float32)
+        else:
+            self.prediction = []
+            
         self._num = int(len(self.labels) * self.noise_ratio)
 
         self.neighbour_labels = np.zeros(self.soft_labels.shape)
@@ -363,6 +368,49 @@ class Cifar10Train(tv.datasets.CIFAR10):
         sublabelset = list(sublabelset)
         
         return subtrainset, sublabelset
+    
+    def update_labels_randRelab(self, result, train_noisy_indexes, rand_ratio):
+
+        idx = (self._count % self.args.epoch_update).astype(np.uint8)
+        self.prediction[idx,:] = result
+        nb_noisy = len(train_noisy_indexes)
+        nb_rand = int(nb_noisy*rand_ratio)
+        idx_noisy_all = list(range(nb_noisy))
+        idx_noisy_all = np.random.permutation(idx_noisy_all)
+
+        idx_rand = idx_noisy_all[:nb_rand]
+        idx_relab = idx_noisy_all[nb_rand:]
+
+        if rand_ratio == 0.0:
+            idx_relab = list(range(len(train_noisy_indexes)))
+            idx_rand = []
+
+        if self._count >= self.args.epoch_begin:
+
+            relabel_indexes = list(train_noisy_indexes[idx_relab])
+            self.soft_labels[relabel_indexes] = result[relabel_indexes]
+
+            self.train_labels[relabel_indexes] = self.soft_labels[relabel_indexes].argmax(axis = 1).astype(np.int64)
+
+
+            for idx_num in train_noisy_indexes[idx_rand]:
+                new_soft = np.ones(self.args.num_classes)
+                new_soft = new_soft*(1/self.args.num_classes)
+
+                self.soft_labels[idx_num] = new_soft
+                self.train_labels[idx_num] = self.soft_labels[idx_num].argmax(axis = 0).astype(np.int64)
+
+
+            print("Samples relabeled with the prediction: ", str(len(idx_relab)))
+            print("Samples relabeled with '{0}': ".format(self.args.relab), str(len(idx_rand)))
+
+        self.Z_exp_labels = self.alpha * self.Z_exp_labels + (1. - self.alpha) * self.prediction[idx,:]
+        self.z_exp_labels =  self.Z_exp_labels * (1. / (1. - self.alpha ** (self._count + 1)))
+
+        self._count += 1
+
+    
+    
     
     def update_labels(self, result):
         self.soft_labels = result#self.result

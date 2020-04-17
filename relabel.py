@@ -157,7 +157,7 @@ def data_config(data_name, first_stage = True):
 
 
 def main(args):
-    
+
     # variable initialization 
     acc_train_per_epoch = []
     acc_val_per_epoch = []
@@ -250,6 +250,9 @@ def main(args):
     ax3.grid(True)
     fig3.savefig(args.experiment_name + '_accuracy.png', dpi = 150)
     plt.close()
+    
+    loss_and_labels = np.array([loss_per_epoch_train_1st[-1],first_stage_train_loader.dataset.labels])
+    np.save("accuracy_measures/relabel.npy",loss_and_labels)
     
     if args.compare_to_forgetting:
         auc_name = args.first_stage_data_name + '_' + args.first_stage_noise_type

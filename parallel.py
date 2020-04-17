@@ -142,7 +142,7 @@ def main(args):
     if device == "cuda":
         torch.cuda.manual_seed_all(args.seed)  # GPU seed
     ################################################################################
-    
+
     # 1st model path
     subset1_list = "complete"
     model_1st_path = args.first_stage_data_name + '_parallel_1_epoch_' + str(args.epoch_1st) + '_alldata_' + 'lr_' + str(args.lr) + '.pth'
@@ -227,6 +227,10 @@ def main(args):
         args.experiment_name = 'parallel_2_cross'
         plot_loss_CE_acc(args,cross_loss_per_epoch_train_2,cross_cE_track_2,noisy_indexes_2,clean_labels_2,acc_train_per_epoch_2,acc_val_per_epoch_2)
 
+        ce_concat = np.concatenate(cross_cE_track_1[-1],cross_cE_track_2[-1])
+        label_concat = np.concatenate(train_loader_1.dataset.lables,train_loader_2.dataset.lables)
+        ce_and_labels = np.array([ce_concat,label_concat])
+        np.save("accuracy_measures/parallel.npy",ce_and_labels)
 def plot_loss_CE_acc(args,loss_per_epoch_train,cE_track,noisy_indexes,clean_labels,acc_train_per_epoch,acc_val_per_epoch):
     
     # Prep for graphs plots

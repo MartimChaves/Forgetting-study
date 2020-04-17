@@ -390,6 +390,10 @@ def main(args):
     np.save("results/" + save_file_name + ".npy",np.array(loss_tr_t))
     np.save("results/" + save_file_name + "_noisy_indx.npy",np.array(noisy_labels))
 
+    if args.track_CE:
+        ce_and_labels = np.array([second_stage_CE_track[-1],first_stage_train_loader.dataset.labels])
+        np.save("accuracy_measures/forget.npy",ce_and_labels)
+    
     # plot histogram
     # get index of 20% of highest losses
     if args.save_best_AUC_model:
