@@ -251,8 +251,8 @@ def main(args):
     fig3.savefig(args.experiment_name + '_accuracy.png', dpi = 150)
     plt.close()
     
-    loss_and_labels = np.array([loss_per_epoch_train_1st[-1],first_stage_train_loader.dataset.labels])
-    np.save("accuracy_measures/relabel.npy",loss_and_labels)
+    loss = np.array(loss_per_epoch_train_1st[-1])
+    np.save("accuracy_measures/relabel.npy",loss)
     
     if args.compare_to_forgetting:
         auc_name = args.first_stage_data_name + '_' + args.first_stage_noise_type

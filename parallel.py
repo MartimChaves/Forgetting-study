@@ -30,12 +30,12 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=100, help='#images in each mini-batch')
     parser.add_argument('--test_batch_size', type=int, default=100, help='#images in each mini-batch')
     
-    parser.add_argument('--epoch_1st', type=int, default=2, help='training epoches for the 1st stage')
+    parser.add_argument('--epoch_1st', type=int, default=1, help='training epoches for the 1st stage')
     parser.add_argument('--epoch_2nd', type=int, default=11, help='training epoches for the 2nd stage')
     
     parser.add_argument('--first_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
     parser.add_argument('--first_stage_noise_ration', type=float, default=0.4, help='noise ratio for the first stage of training')
-    parser.add_argument('--first_stage_noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
+    parser.add_argument('--first_stage_noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--first_stage_data_name', type=str, default='cifar10', help='Dataset to use in the first stage of model training')
     parser.add_argument('--first_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     
@@ -66,7 +66,7 @@ def parse_args():
     parser.add_argument('--relearn_freq', type=int, default=2, help='Frequency of training with 1st stage data when in 2nd stage (2=every 2 epochs, train 1 epoch with 1st stage data)')
     
     parser.add_argument('--NN_k', type=int, default=100, help='Number of neighbours to consider in the LOF computation')
-    
+    parser.add_argument('--repeat', type=str, default='True', help='Rerun model training')
     args = parser.parse_args()
     return args
 
@@ -158,7 +158,7 @@ def main(args):
     
     print("First stage model path is: ", model_1st_path)
     
-    if not os.path.isfile(model_1st_path) and not os.path.isfile(model_2nd_path):
+    if not os.path.isfile(model_1st_path) and not os.path.isfile(model_2nd_path) or args.repeat == "True":
         
         loss_per_epoch_train_1st = []
         loss_per_epoch_train_2nd = []
@@ -227,10 +227,11 @@ def main(args):
         args.experiment_name = 'parallel_2_cross'
         plot_loss_CE_acc(args,cross_loss_per_epoch_train_2,cross_cE_track_2,noisy_indexes_2,clean_labels_2,acc_train_per_epoch_2,acc_val_per_epoch_2)
 
-        ce_concat = np.concatenate(cross_cE_track_1[-1],cross_cE_track_2[-1])
-        label_concat = np.concatenate(train_loader_1.dataset.lables,train_loader_2.dataset.lables)
-        ce_and_labels = np.array([ce_concat,label_concat])
+        ce_concat = np.concatenate((cross_cE_track_1[-1],cross_cE_track_2[-1]))
+        label_concat = np.concatenate((train_loader_1.dataset.labels,train_loader_2.dataset.labels))
+        ce_and_labels = np.array(ce_concat)
         np.save("accuracy_measures/parallel.npy",ce_and_labels)
+        
 def plot_loss_CE_acc(args,loss_per_epoch_train,cE_track,noisy_indexes,clean_labels,acc_train_per_epoch,acc_val_per_epoch):
     
     # Prep for graphs plots

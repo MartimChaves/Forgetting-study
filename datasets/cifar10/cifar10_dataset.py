@@ -71,6 +71,53 @@ def get_dataset(args, transform_train, transform_test, num_classes, noise_ratio,
 
     return cifar_train, testset, cifar_train.clean_labels, cifar_train.noisy_labels, cifar_train.noisy_indexes,  cifar_train.labelsNoisyOriginal
 
+def get_ssl_dataset(args, transform_train, transform_test, metrics):
+    num_classes = 10
+    cifar_train = Cifar10Train(args, 0.4, num_classes, train=True, transform=transform_train, pslab_transform = transform_test,ssl=True)
+    cifar_train.random_in_noise()
+    
+    th = args.threshold 
+    # trainset, noisy_indexes, clean_indexes
+    # update_labels_randRelab --> needs to work
+    trainset = 0
+    
+    temp_clean_indexes = []
+    
+    for metric in metrics:
+        # organize by ascendent order 
+        sorted_indxs_metric = np.argsort(metric)
+        if args.balanced_set:
+            # select th number of samples per class
+            for sample_class in range(num_classes):
+                # add to clean set
+                class_indxs = np.where(cifar_train.labels == sample_class)[0]
+                c_idx_in_sorted = np.isin(sorted_indxs_metric,class_indxs) # where the class indexs are in the sorted indexes
+                sorted_class_indxs = sorted_indxs_metric[np.where(c_idx_in_sorted==True)]
+                n = round(len(sorted_class_indxs)*th)
+                temp_clean_indexes.extend(sorted_class_indxs[:n])
+        else:
+            n = round(len(cifar_train.labels)*th)
+            temp_clean_indexes.extend(sorted_indxs_metric[:n])
+    
+    metrics_arr = np.array(metrics)
+    if metrics_arr.shape[0] > 1: # pylint: disable=unsubscriptable-object
+        if args.agree_on_clean:
+            temp_clean_indx_arr = np.array(temp_clean_indexes)
+            values, count = np.unique(temp_clean_indx_arr,return_counts=True) 
+            train_clean_indexes = values[count>1] 
+        else:
+            train_clean_indexes = np.array(list(set(temp_clean_indexes)))
+        
+    # everything else is noisy
+    all_indxs = np.array(list(range(cifar_train.labels.shape[0])))       
+    train_noisy_indexes = np.where(np.isin(all_indxs,train_clean_indexes)==False)[0]
+    
+    true_clean = np.isin(train_clean_indexes,cifar_train.clean_indexes)
+    boolval, count = np.unique(true_clean, return_counts=True)
+    
+    percent_clean = round(count[1]/(count[0]+count[1]),2)*100
+    
+    return cifar_train, train_noisy_indexes, train_clean_indexes, percent_clean
 
 def get_parallel_datasets(args, transform_train, transform_test, noise_ratio,parallel):
     first_stage = True
@@ -154,7 +201,7 @@ class Cifar10Test(tv.datasets.CIFAR10):
 
 class Cifar10Train(tv.datasets.CIFAR10):
     # including hard labels & soft labels
-    def __init__(self, args, noise_ratio, num_classes, first_stage, train=True, transform=None, target_transform=None, pslab_transform=None, download=False, subset=[], parallel=''):
+    def __init__(self, args, noise_ratio, num_classes, first_stage='', train=True, transform=None, target_transform=None, pslab_transform=None, download=False, subset=[], parallel='', ssl=False):
         super(Cifar10Train, self).__init__(args.train_root, train=train, transform=transform, target_transform=target_transform, download=download)
         self.root = os.path.expanduser(args.train_root)
         self.transform = transform
@@ -162,28 +209,21 @@ class Cifar10Train(tv.datasets.CIFAR10):
         self.train = train  # Training set or validation set
 
         ####### New
-        self.first_stage = first_stage
         self.noise_ratio = noise_ratio
         self.args = args
         self.num_classes = num_classes
-        self.in_index = []
-        self.out_index = []
+        self.ssl = ssl
+        
         self.noisy_indexes = []
         self.clean_indexes = []
         self.clean_labels = []
         self.noisy_labels = []
-        self.out_data = []
-        self.out_labels = []
+        
         self.soft_labels = []
         self.labelsNoisyOriginal = []
         self._num = []
         self._count = 0
-        #self.prediction = []
-        self.confusion_matrix_in = np.array([])
-        self.confusion_matrix_out = np.array([])
-        self.labeled_idx = []
-        self.unlabeled_idx = []
-        
+
         if parallel:
             indx1 = int(parallel[0]*0.5*len(self.train_data))
             indx2 = int(indx1 + 0.5*len(self.train_data))
@@ -200,18 +240,18 @@ class Cifar10Train(tv.datasets.CIFAR10):
                 self.data = subtrainset
                 self.labels = sublabelset
         
-        self.alpha = 0.6
-        self.Z_exp_labels = np.zeros((len(self.train_labels), 10), dtype=np.float32)
+        if ssl:
+            self.alpha = 0.6
+            self.original_labels = np.copy(self.labels)
 
         self.gaus_noise = False
         self.pslab_transform = pslab_transform
 
         self.neighbour_labels = []
-        self.training_pseudolabels = []
 
         # From in ou split function:
         self.soft_labels = np.zeros((len(self.labels), 10), dtype=np.float32)
-        if self.args.epoch_update:
+        if ssl:
             self.prediction = np.zeros((self.args.epoch_update, len(self.data), self.num_classes), dtype=np.float32)
         else:
             self.prediction = []
@@ -219,12 +259,6 @@ class Cifar10Train(tv.datasets.CIFAR10):
         self._num = int(len(self.labels) * self.noise_ratio)
 
         self.neighbour_labels = np.zeros(self.soft_labels.shape)
-        self.training_pseudolabels = np.zeros(self.soft_labels.shape)
-        self.tracking_pseudolabels = np.zeros(self.soft_labels.shape)
-
-        self.current_clean_bin_idx = []
-        self.current_clean_idx = []
-
 
     ################# Random in-distribution noise #########################
     def random_in_noise(self):
@@ -250,9 +284,7 @@ class Cifar10Train(tv.datasets.CIFAR10):
         self.noisy_indexes = noisy_indexes
         self.clean_labels = clean_labels
         self.clean_indexes = clean_indexes
-        self.confusion_matrix_in = (np.ones((self.num_classes, self.num_classes)) - np.identity(self.num_classes))\
-                                    *(self.noise_ratio/(self.num_classes -1)) + \
-                                    np.identity(self.num_classes)*(1 - self.noise_ratio)
+
 
 
     ##########################################################################
@@ -320,16 +352,30 @@ class Cifar10Train(tv.datasets.CIFAR10):
     ##########################################################################
 
     def __getitem__(self, index):
-        img, labels, soft_labels, noisy_labels = self.data[index], self.labels[index], self.soft_labels[index], self.labelsNoisyOriginal[index]
-        img = Image.fromarray(img)
+        if not self.ssl:
+            img, labels, soft_labels, noisy_labels = self.data[index], self.labels[index], self.soft_labels[index], self.labelsNoisyOriginal[index]
+            img = Image.fromarray(img)
 
-        if self.transform is not None:
-            img = self.transform(img)
+            if self.transform is not None:
+                img = self.transform(img)
 
-        if self.target_transform is not None:
-            labels = self.target_transform(labels)
+            if self.target_transform is not None:
+                labels = self.target_transform(labels)
 
-        return img, labels, soft_labels, index, noisy_labels, 0, 0
+            return img, labels, soft_labels, index, noisy_labels, 0, 0
+        if self.ssl:
+            img, labels, soft_labels= self.train_data[index], self.labels[index], self.soft_labels[index]
+            img = Image.fromarray(img)
+
+            img_pseudolabels = 0 # DApseudolab == True
+
+            if self.transform is not None:
+                img = self.transform(img)
+
+            if self.target_transform is not None:
+                labels = self.target_transform(labels)
+
+            return img, img_pseudolabels, labels, soft_labels, index
     
     def __len__(self):
         return len(self.data)
@@ -371,10 +417,10 @@ class Cifar10Train(tv.datasets.CIFAR10):
     
     def update_labels_randRelab(self, result, train_noisy_indexes, rand_ratio):
 
-        idx = (self._count % self.args.epoch_update).astype(np.uint8)
+        idx = self._count % self.args.epoch_update
         self.prediction[idx,:] = result
         nb_noisy = len(train_noisy_indexes)
-        nb_rand = int(nb_noisy*rand_ratio)
+        nb_rand = int(nb_noisy*rand_ratio) # = 0
         idx_noisy_all = list(range(nb_noisy))
         idx_noisy_all = np.random.permutation(idx_noisy_all)
 
@@ -390,7 +436,7 @@ class Cifar10Train(tv.datasets.CIFAR10):
             relabel_indexes = list(train_noisy_indexes[idx_relab])
             self.soft_labels[relabel_indexes] = result[relabel_indexes]
 
-            self.train_labels[relabel_indexes] = self.soft_labels[relabel_indexes].argmax(axis = 1).astype(np.int64)
+            self.labels[relabel_indexes] = self.soft_labels[relabel_indexes].argmax(axis = 1).astype(np.int64)
 
 
             for idx_num in train_noisy_indexes[idx_rand]:
@@ -398,20 +444,15 @@ class Cifar10Train(tv.datasets.CIFAR10):
                 new_soft = new_soft*(1/self.args.num_classes)
 
                 self.soft_labels[idx_num] = new_soft
-                self.train_labels[idx_num] = self.soft_labels[idx_num].argmax(axis = 0).astype(np.int64)
+                self.labels[idx_num] = self.soft_labels[idx_num].argmax(axis = 0).astype(np.int64)
 
 
             print("Samples relabeled with the prediction: ", str(len(idx_relab)))
             print("Samples relabeled with '{0}': ".format(self.args.relab), str(len(idx_rand)))
 
-        self.Z_exp_labels = self.alpha * self.Z_exp_labels + (1. - self.alpha) * self.prediction[idx,:]
-        self.z_exp_labels =  self.Z_exp_labels * (1. / (1. - self.alpha ** (self._count + 1)))
-
+ 
         self._count += 1
 
-    
-    
-    
     def update_labels(self, result):
         self.soft_labels = result#self.result
         self.labels = self.soft_labels.argmax(axis = 1).astype(np.int64)

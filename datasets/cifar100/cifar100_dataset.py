@@ -24,7 +24,7 @@ def get_dataset(args,root,noise_type,subset,noise_ratio,transform_train, transfo
     else:
         print(noise_type + " not added yet. No changes made.")
         
-    testset = Cifar100(root,subset,noise_ratio,train=False,transform=transform_train)
+    testset = Cifar100(args,root,subset,noise_ratio,train=False,transform=transform_train)
     cifar_train.labels = np.asarray(cifar_train.labels, dtype=np.long)
     cifar_train.labelsNoisyOriginal = cifar_train.labels.copy()
     

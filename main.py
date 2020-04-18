@@ -30,20 +30,20 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=100, help='#images in each mini-batch')
     parser.add_argument('--test_batch_size', type=int, default=100, help='#images in each mini-batch')
     
-    parser.add_argument('--epoch_1st', type=int, default=200, help='training epoches for the 1st stage')
+    parser.add_argument('--epoch_1st', type=int, default=1, help='training epoches for the 1st stage')
     parser.add_argument('--epoch_2nd', type=int, default=2, help='training epoches for the 2nd stage')
     
     parser.add_argument('--first_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
     parser.add_argument('--first_stage_noise_ration', type=float, default=0.4, help='noise ratio for the first stage of training')
-    parser.add_argument('--first_stage_noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
+    parser.add_argument('--first_stage_noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--first_stage_data_name', type=str, default='cifar10', help='Dataset to use in the first stage of model training')
     parser.add_argument('--first_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     
     parser.add_argument('--second_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
     parser.add_argument('--second_stage_noise_ration', type=float, default=0.0, help='noise ratio for the first stage of training')
-    parser.add_argument('--second_stage_noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
-    parser.add_argument('--second_stage_data_name', type=str, default='svhn', help='Dataset to use in the first stage of model training')
-    parser.add_argument('--second_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
+    parser.add_argument('--second_stage_noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
+    parser.add_argument('--second_stage_data_name', type=str, default='cifar100', help='Dataset to use in the first stage of model training')
+    parser.add_argument('--second_stage_subset', nargs='+', type=int, default=[2,14,23,35,48,51,69,74,87,90], help='Classes of dataset to use as subset')
     
     parser.add_argument('--unfreeze_secondStage', type=int, default=11, help='Step/epoch at which models inner layers are set to not frozen')
     parser.add_argument('--freeze_epochWise', dest='freeze_epochWise', default=False, action='store_true', help='if true, inner layers are frozen for the duration of epochs')
@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument('--track_CE', dest='track_CE', default=False, action='store_true', help='if true, track CE')
     
     parser.add_argument('--second_stg_max_median_loss', type=int, default=1500, help='First stage data loss when retraining maximum median loss - after that point, training is alted')
-    parser.add_argument('--step_number', type=int, default=16, help='number of steps')
+    parser.add_argument('--step_number', type=int, default=1, help='number of steps')
     
     parser.add_argument('--seed', type=int, default=42, help='seed for replicability (default: 42)')
     
@@ -391,7 +391,7 @@ def main(args):
     np.save("results/" + save_file_name + "_noisy_indx.npy",np.array(noisy_labels))
 
     if args.track_CE:
-        ce_and_labels = np.array([second_stage_CE_track[-1],first_stage_train_loader.dataset.labels])
+        ce_and_labels = np.array(second_stage_CE_track[-1])
         np.save("accuracy_measures/forget.npy",ce_and_labels)
     
     # plot histogram

@@ -14,7 +14,7 @@ import logging
 import os
 import time
 
-from datasets.cifar10.cifar10_dataset import get_dataset
+from datasets.cifar10.cifar10_dataset import get_ssl_dataset
 from utils.ssl_networks import CNN as MT_Net
 from utils.TwoSampler import *
 from utils.utils_ssl import *
@@ -24,12 +24,12 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
     parser.add_argument('--batch_size', type=int, default=100, help='#images in each mini-batch')
     parser.add_argument('--test_batch_size', type=int, default=100, help='#images in each mini-batch')
-    parser.add_argument('--epoch', type=int, default=150, help='training epoches')
+    parser.add_argument('--epoch', type=int, default=1, help='training epoches')
     parser.add_argument('--wd', type=float, default=1e-4, help='weight decay')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--dataset_type', default='semiSup', help='noise type of the dataset')
-    parser.add_argument('--train_root', default='./data', help='root for train data')
-    parser.add_argument('--epoch_begin', default=0, type=int, help='the epoch to begin update labels')
+    parser.add_argument('--train_root', default='./datasets/cifar10/data', help='root for train data')
+    parser.add_argument('--epoch_begin', default=2, type=int, help='the epoch to begin update labels')
     parser.add_argument('--epoch_update', default=1, type=int, help='#epoch to average to update soft labels')
     parser.add_argument('--labeled_samples', type=int, default=10000, help='number of labeled samples')
     parser.add_argument('--out', type=str, default='./data/model_data', help='Directory of the output')
@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument('--beta', type=float, default=0.4, help='Hyper param for loss')
     parser.add_argument('--download', type=bool, default=False, help='download dataset')
     parser.add_argument('--network', type=str, default='MT_Net', help='the backbone of the network')
-    parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
+    parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
     parser.add_argument('--seed_val', type=int, default=1, help='seed for the validation split')
     parser.add_argument('--M', action='append', type=int, default=[], help="Milestones for the LR sheduler")
     parser.add_argument('--experiment_name', type=str, default = 'Proof',help='name of the experiment (for the output files)')
@@ -46,7 +46,7 @@ def parse_args():
     parser.add_argument('--relab', type=str, default='unifRelab', help='choose how to relabel the random samples from the unlabeled set')
     parser.add_argument('--num_classes', type=int, default=10, help='beta parameter for the EMA in the soft labels')
     parser.add_argument('--gausTF', type=bool, default=False, help='apply gaussian noise')
-    parser.add_argument('--dropout', type=float, default=0.0, help='cnn dropout')
+    parser.add_argument('--dropout', type=float, default=0.1, help='cnn dropout')
     parser.add_argument('--initial_epoch', type=int, default=0, help='#images in each mini-batch')
     parser.add_argument('--Mixup_Alpha', type=float, default=1, help='alpha value for the beta dist from mixup')
     parser.add_argument('--cuda_dev', type=int, default=0, help='set to 1 to choose the second gpu')
@@ -63,29 +63,47 @@ def parse_args():
     parser.add_argument('--DApseudolab', type=str, default="False", help='Apply data augmentation when computing pseudolabels')
     parser.add_argument('--DA', type=str, default='standard', help='Choose the type of DA')
 
+    parser.add_argument('--threshold', type=int, default=0.20, help='Percentage of samples to consider clean')
+    parser.add_argument('--agree_on_clean', dest='agree_on_clean', default=True, action='store_true', help='if true, indexes of clean samples must be present in all metric vectors')
+    parser.add_argument('--balanced_set', dest='balanced_set', default=True, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
+    parser.add_argument('--forget', dest='forget', default=True, action='store_true', help='if true, use forget results')
+    parser.add_argument('--relabel', dest='relabel', default=True, action='store_true', help='if true, use relabel results')
+    parser.add_argument('--parallel', dest='parallel', default=False, action='store_true', help='if true, use parallel results')
     args = parser.parse_args()
     return args
 
-def data_config(args, transform_train, transform_test):#, dst_folder):
-
+def data_config(args, transform_train, transform_test):
     args.val_samples = 0
+   
+    #trainset, testset, clean_labels, noisy_labels, train_noisy_indexes, train_clean_indexes, valset = get_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset)
 
-    num_classes = 10
-    noise_ratio = 0.4
-    noise_type = 'ramdon_in'
-    subset = []
-    first_stage = True #irrelevant - to be removed
+    # load data of meticrs results and select clean and noisy samples
     
-    trainset, clean_labels, noisy_labels, train_noisy_indexes, train_clean_indexes, valset = get_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset)
-
+    # We need: trainset (aka dataset itself); noisy_indexes; clean_indexes
+    # update_labels_randRelab to work
+    metrics = []
+    if args.forget:
+        forget_arr = np.load("accuracy_measures/forget.npy")
+        metrics.append(forget_arr)
+    
+    if args.relabel:
+        relabel_arr = np.load("accuracy_measures/relabel.npy")
+        metrics.append(forget_arr)
+    
+    if args.parallel:
+        parallel_arr = np.load("accuracy_measures/parallel.npy")
+        metrics.append(parallel_arr)
+    
+    trainset, train_noisy_indexes, train_clean_indexes, percent_clean = get_ssl_dataset(args, transform_train, transform_test, metrics)
+    
+    #train_clean_indexes = trainset.clean_indexes
     batch_sampler = TwoStreamBatchSampler(train_noisy_indexes, train_clean_indexes, args.batch_size, args.labeled_batch_size) 
     train_loader = torch.utils.data.DataLoader(trainset, batch_sampler=batch_sampler, num_workers=0, pin_memory=True)
 
-    testset = datasets.CIFAR10(root='./data', train=False, download=False, transform=transform_test)
-
+    testset = datasets.CIFAR10(root='./datasets/cifar10/data', train=False, download=False, transform=transform_test)
     test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
-    return train_loader, test_loader, train_noisy_indexes
+    return train_loader, test_loader, train_noisy_indexes, percent_clean
 
 def main(args):#, dst_folder):
     # best_ac only record the best top1_ac for validation set.
@@ -121,15 +139,13 @@ def main(args):#, dst_folder):
     ])
 
     # data loader
-    train_loader, test_loader, train_noisy_indexes = data_config(args, transform_train, transform_test)#,  dst_folder)
+    train_loader, test_loader, train_noisy_indexes, percent_clean = data_config(args, transform_train, transform_test)#,  dst_folder)
 
     model = MT_Net(num_classes = args.num_classes, dropRatio = args.dropout).to(device)
 
-    milestones = args.M
-
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=1e-4)
 
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.M, gamma=0.1)
 
     loss_train_epoch = []
     loss_val_epoch = []
@@ -157,11 +173,33 @@ def main(args):#, dst_folder):
         loss_val_epoch += loss_per_epoch
         acc_train_per_epoch += [top1_train_ac]
         acc_val_per_epoch += acc_val_per_epoch_i
-
+        
+    # write to a text file accuracy values
+    save_info = "th_"
+    # % of chosen images
+    save_info = save_info + str(args.threshold) + "_"
+    # agree
+    if args.agree_on_clean:
+        save_info = save_info + "agreeOnClean" + "_"
+    # balanced set
+    if args.balanced_set:
+        save_info = save_info + "balancedSet" + "_"
+    # forget
+    if args.forget:
+        save_info = save_info + "forget" + "_"
+    # relabel
+    if args.relabel:
+        save_info = save_info + "relabel" + "_"
+    # parallel
+    if args.parallel:
+        save_info = save_info + "parallel" + "_"
+    
+    save_info = save_info + "accRes_" + str(round(top1_train_ac,5)) 
+    
+    path_file = open("accuracy_measures/acc_results.txt","a") 
+    path_file.write(save_info + "\n")
+    path_file.close()
+    
 if __name__ == "__main__":
     args = parse_args()
-    #logging.info(args)
-    # record params
-    #dst_folder = record_params(args)
-    # train
-    main(args)#, dst_folder)
+    main(args)

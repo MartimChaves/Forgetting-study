@@ -9,7 +9,7 @@ import scipy.stats as stats
 import math
 import numpy as np
 from matplotlib import pyplot as plt
-from utils import accuracy_v2
+#from .utils import accuracy_v2
 from AverageMeter import AverageMeter
 import time
 import warnings
@@ -160,3 +160,19 @@ def testing(args, model, device, test_loader):
     acc_val_per_epoch = [np.array(100. * correct / len(test_loader.dataset))]
 
     return (loss_per_epoch, acc_val_per_epoch)
+
+def accuracy_v2(preds, labels, top=[1,5]):
+    """Compute the precision@k for the specified values of k"""
+    result = []
+    maxk = max(top)
+    batch_size = preds.size(0)
+
+    _, pred = preds.topk(maxk, 1, True, True)
+    pred = pred.t() # pred[k-1] stores the k-th predicted label for all samples in the batch.
+    correct = pred.eq(labels.view(1,-1).expand_as(pred))
+
+    for k in top:
+        correct_k = correct[:k].view(-1).float().sum(0)
+        result.append(correct_k.mul_(100.0 / batch_size))
+
+    return result
