@@ -10,7 +10,7 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 #from .utils import accuracy_v2
-from AverageMeter import AverageMeter
+from .AverageMeter import AverageMeter
 import time
 import warnings
 warnings.filterwarnings('ignore')

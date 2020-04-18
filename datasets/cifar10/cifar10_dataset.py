@@ -107,6 +107,8 @@ def get_ssl_dataset(args, transform_train, transform_test, metrics):
             train_clean_indexes = values[count>1] 
         else:
             train_clean_indexes = np.array(list(set(temp_clean_indexes)))
+    else:
+        train_clean_indexes = np.array(temp_clean_indexes)
         
     # everything else is noisy
     all_indxs = np.array(list(range(cifar_train.labels.shape[0])))       

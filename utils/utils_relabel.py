@@ -6,7 +6,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 
 import numpy as np
-from AverageMeter import AverageMeter
+from .AverageMeter import AverageMeter
 import time
 import matplotlib.pyplot as plt
 

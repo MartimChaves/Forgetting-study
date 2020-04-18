@@ -1,2 +1,2 @@
-th_0.2_agreeOnClean_balancedSet_forget_relabel_accRes_18.3718487394958
-th_0.2_agreeOnClean_balancedSet_forget_relabel_accRes_18.37185
+th_0.2_percentClean_88.0_forget_accRes_19.28361
+th_0.2_percentClean_62.0_parallel_accRes_20.7458

@@ -38,7 +38,7 @@ def parse_args():
     parser.add_argument('--download', type=bool, default=False, help='download dataset')
     parser.add_argument('--network', type=str, default='MT_Net', help='the backbone of the network')
     parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
-    parser.add_argument('--seed_val', type=int, default=1, help='seed for the validation split')
+    parser.add_argument('--seed_val', type=int, default=42, help='seed for the validation split')
     parser.add_argument('--M', action='append', type=int, default=[], help="Milestones for the LR sheduler")
     parser.add_argument('--experiment_name', type=str, default = 'Proof',help='name of the experiment (for the output files)')
     parser.add_argument('--label_noise', type=float, default = 0.0,help='ratio of labeles to relabel randomly')
@@ -64,11 +64,11 @@ def parse_args():
     parser.add_argument('--DA', type=str, default='standard', help='Choose the type of DA')
 
     parser.add_argument('--threshold', type=int, default=0.20, help='Percentage of samples to consider clean')
-    parser.add_argument('--agree_on_clean', dest='agree_on_clean', default=True, action='store_true', help='if true, indexes of clean samples must be present in all metric vectors')
-    parser.add_argument('--balanced_set', dest='balanced_set', default=True, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
-    parser.add_argument('--forget', dest='forget', default=True, action='store_true', help='if true, use forget results')
-    parser.add_argument('--relabel', dest='relabel', default=True, action='store_true', help='if true, use relabel results')
-    parser.add_argument('--parallel', dest='parallel', default=False, action='store_true', help='if true, use parallel results')
+    parser.add_argument('--agree_on_clean', dest='agree_on_clean', default=False, action='store_true', help='if true, indexes of clean samples must be present in all metric vectors')
+    parser.add_argument('--balanced_set', dest='balanced_set', default=False, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
+    parser.add_argument('--forget', dest='forget', default=False, action='store_true', help='if true, use forget results')
+    parser.add_argument('--relabel', dest='relabel', default=False, action='store_true', help='if true, use relabel results')
+    parser.add_argument('--parallel', dest='parallel', default=True, action='store_true', help='if true, use parallel results')
     args = parser.parse_args()
     return args
 
@@ -177,7 +177,7 @@ def main(args):#, dst_folder):
     # write to a text file accuracy values
     save_info = "th_"
     # % of chosen images
-    save_info = save_info + str(args.threshold) + "_"
+    save_info = save_info + str(args.threshold) + "_percentClean_" + str(percent_clean) + "_"
     # agree
     if args.agree_on_clean:
         save_info = save_info + "agreeOnClean" + "_"
