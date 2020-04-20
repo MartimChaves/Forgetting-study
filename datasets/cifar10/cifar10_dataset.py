@@ -117,9 +117,10 @@ def get_ssl_dataset(args, transform_train, transform_test, metrics):
     true_clean = np.isin(train_clean_indexes,cifar_train.clean_indexes)
     boolval, count = np.unique(true_clean, return_counts=True)
     
-    percent_clean = round(count[1]/(count[0]+count[1]),2)*100
+    percent_clean = round(count[1]/(count[0]+count[1]),7)
+    nImgs = count[0]+count[1]
     
-    return cifar_train, train_noisy_indexes, train_clean_indexes, percent_clean
+    return cifar_train, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs
 
 def get_parallel_datasets(args, transform_train, transform_test, noise_ratio,parallel):
     first_stage = True

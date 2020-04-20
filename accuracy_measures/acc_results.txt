@@ -1,2 +1,8 @@
 th_0.2_percentClean_88.0_forget_accRes_19.28361
 th_0.2_percentClean_62.0_parallel_accRes_20.7458
+th_0.2_percentClean_88.0_forget_accRes_26.80252
+th_0.2_percentClean_88.0_forget_accRes_26.80252
+th_0.2_percentClean_88.0_forget_accRes_26.80252
+th_0.2_percentClean_88.94_noImages_10000_relabel_accRes_26.61765
+th_0.2_percentClean_88.94_noImages_10000_relabel_accRes_26.61765
+th_0.2_percentClean_0.8894_noImages_10000_relabel_accRes_26.61765

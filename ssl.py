@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
     parser.add_argument('--batch_size', type=int, default=100, help='#images in each mini-batch')
     parser.add_argument('--test_batch_size', type=int, default=100, help='#images in each mini-batch')
-    parser.add_argument('--epoch', type=int, default=1, help='training epoches')
+    parser.add_argument('--epoch', type=int, default=2, help='training epoches')
     parser.add_argument('--wd', type=float, default=1e-4, help='weight decay')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--dataset_type', default='semiSup', help='noise type of the dataset')
@@ -68,7 +68,7 @@ def parse_args():
     parser.add_argument('--balanced_set', dest='balanced_set', default=False, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
     parser.add_argument('--forget', dest='forget', default=False, action='store_true', help='if true, use forget results')
     parser.add_argument('--relabel', dest='relabel', default=False, action='store_true', help='if true, use relabel results')
-    parser.add_argument('--parallel', dest='parallel', default=True, action='store_true', help='if true, use parallel results')
+    parser.add_argument('--parallel', dest='parallel', default=False, action='store_true', help='if true, use parallel results')
     args = parser.parse_args()
     return args
 
@@ -88,13 +88,13 @@ def data_config(args, transform_train, transform_test):
     
     if args.relabel:
         relabel_arr = np.load("accuracy_measures/relabel.npy")
-        metrics.append(forget_arr)
+        metrics.append(relabel_arr)
     
     if args.parallel:
         parallel_arr = np.load("accuracy_measures/parallel.npy")
         metrics.append(parallel_arr)
     
-    trainset, train_noisy_indexes, train_clean_indexes, percent_clean = get_ssl_dataset(args, transform_train, transform_test, metrics)
+    trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_dataset(args, transform_train, transform_test, metrics)
     
     #train_clean_indexes = trainset.clean_indexes
     batch_sampler = TwoStreamBatchSampler(train_noisy_indexes, train_clean_indexes, args.batch_size, args.labeled_batch_size) 
@@ -103,14 +103,14 @@ def data_config(args, transform_train, transform_test):
     testset = datasets.CIFAR10(root='./datasets/cifar10/data', train=False, download=False, transform=transform_test)
     test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
-    return train_loader, test_loader, train_noisy_indexes, percent_clean
+    return train_loader, test_loader, train_noisy_indexes, percent_clean, nImgs
 
 def main(args):#, dst_folder):
     # best_ac only record the best top1_ac for validation set.
     best_ac = 0.0
     # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    if args.cuda_dev == 0:
-        torch.cuda.set_device(0)
+    if args.cuda_dev == 0 or args.cuda_dev == 1:
+        torch.cuda.set_device(args.cuda_dev)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     torch.backends.cudnn.deterministic = True  # fix the GPU to deterministic mode
@@ -139,7 +139,7 @@ def main(args):#, dst_folder):
     ])
 
     # data loader
-    train_loader, test_loader, train_noisy_indexes, percent_clean = data_config(args, transform_train, transform_test)#,  dst_folder)
+    train_loader, test_loader, train_noisy_indexes, percent_clean, nImgs = data_config(args, transform_train, transform_test)#,  dst_folder)
 
     model = MT_Net(num_classes = args.num_classes, dropRatio = args.dropout).to(device)
 
@@ -177,7 +177,7 @@ def main(args):#, dst_folder):
     # write to a text file accuracy values
     save_info = "th_"
     # % of chosen images
-    save_info = save_info + str(args.threshold) + "_percentClean_" + str(percent_clean) + "_"
+    save_info = save_info + str(args.threshold) + "_percentClean_" + str(percent_clean) + "_noImages_" + str(nImgs) + "_"
     # agree
     if args.agree_on_clean:
         save_info = save_info + "agreeOnClean" + "_"
@@ -199,6 +199,20 @@ def main(args):#, dst_folder):
     path_file = open("accuracy_measures/acc_results.txt","a") 
     path_file.write(save_info + "\n")
     path_file.close()
+    
+    # Plot accuracy graph
+    acc_train = np.asarray(acc_train_per_epoch)
+    acc_val = np.asarray(acc_val_per_epoch)
+    
+    graph_accuracy(args,acc_train,acc_val)
+    
+    # Plot loss graph
+    plt.plot(loss_train_epoch)
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.title('Loss per epoch - ssl')
+    plt.savefig(args.experiment_name + '.png', dpi = 150)
+    plt.close()        
     
 if __name__ == "__main__":
     args = parse_args()

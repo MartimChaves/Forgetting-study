@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=100, help='#images in each mini-batch')
     parser.add_argument('--test_batch_size', type=int, default=100, help='#images in each mini-batch')
     
-    parser.add_argument('--epoch_1st', type=int, default=1, help='training epoches for the 1st stage')
+    parser.add_argument('--epoch_1st', type=int, default=7, help='training epoches for the 1st stage')
     parser.add_argument('--epoch_2nd', type=int, default=2, help='training epoches for the 2nd stage')
     
     parser.add_argument('--first_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
