@@ -325,7 +325,10 @@ def main(args):
         #     scheduler.step()
         
         scheduler.step()
-        
+    
+    # calculate bmm here
+    
+    
     loss_tr = np.asarray(loss_per_epoch_train)
     loss_tr_t = np.transpose(loss_tr)
     

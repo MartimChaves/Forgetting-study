@@ -6,8 +6,8 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 
 import numpy as np
-from .AverageMeter import AverageMeter
-import time
+from utils.AverageMeter import * #pylint: disable=import-error,no-name-in-module
+from utils.bmm_model import * #pylint: disable=import-error,no-name-in-module
 import matplotlib.pyplot as plt
 
 import time
@@ -171,10 +171,10 @@ def test_cleaning(args, model, device, test_loader):
 
 def train_CrossEntropy(args, model, device, train_loader, optimizer, epoch, num_classes=10):
     
-    batch_time = AverageMeter()
-    train_loss = AverageMeter()
-    top1 = AverageMeter()
-    top5 = AverageMeter()
+    batch_time = AverageMeter() #pylint: disable=undefined-variable
+    train_loss = AverageMeter() #pylint: disable=undefined-variable
+    top1 = AverageMeter() #pylint: disable=undefined-variable
+    top5 = AverageMeter() #pylint: disable=undefined-variable
     
     # switch to train mode
     model.train()
@@ -373,3 +373,4 @@ def graph_measures(title,xlabel,ylabel,clean_measures,noisy_measures,noisy_label
     plt.close(fig)
     
     return 
+
