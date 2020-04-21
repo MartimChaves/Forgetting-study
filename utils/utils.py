@@ -143,47 +143,87 @@ def track_training_loss_plus(args, model, device, train_loader, epoch, fixed_las
             #if last epoch -> save bmm probs
             if epoch == args.epoch_2nd and args.save_BMM_probs: # save on step counter, not epoch
                 
-                ### BMM ###
-                # outliers detection
-                n_CE_cp = np.copy(neighbour_CE)
-                max_perc = np.percentile(n_CE_cp, 95)
-                min_perc = np.percentile(n_CE_cp, 5)
-                n_CE_cp = n_CE_cp[(n_CE_cp<=max_perc) & (n_CE_cp>=min_perc)]
+                bmm_probs(neighbour_CE,all_index,device)
+                # ### BMM ###
+                # # outliers detection
+                # n_CE_cp = np.copy(neighbour_CE)
+                # max_perc = np.percentile(n_CE_cp, 95)
+                # min_perc = np.percentile(n_CE_cp, 5)
+                # n_CE_cp = n_CE_cp[(n_CE_cp<=max_perc) & (n_CE_cp>=min_perc)]
 
-                # "loss" -> we are using CE measure here
-                bmm_model_maxLoss = torch.FloatTensor([max_perc]).to(device)
-                bmm_model_minLoss = torch.FloatTensor([min_perc]).to(device) + 10e-6
+                # # "loss" -> we are using CE measure here
+                # bmm_model_maxLoss = torch.FloatTensor([max_perc]).to(device)
+                # bmm_model_minLoss = torch.FloatTensor([min_perc]).to(device) + 10e-6
 
-                n_CE_cp = (n_CE_cp - bmm_model_minLoss.data.cpu().numpy()) / (bmm_model_maxLoss.data.cpu().numpy() - bmm_model_minLoss.data.cpu().numpy() + 1e-6)
+                # n_CE_cp = (n_CE_cp - bmm_model_minLoss.data.cpu().numpy()) / (bmm_model_maxLoss.data.cpu().numpy() - bmm_model_minLoss.data.cpu().numpy() + 1e-6)
 
-                n_CE_cp[n_CE_cp>=1] = 1-10e-4
-                n_CE_cp[n_CE_cp <= 0] = 10e-4
+                # n_CE_cp[n_CE_cp>=1] = 1-10e-4
+                # n_CE_cp[n_CE_cp <= 0] = 10e-4
 
-                print('######## Estimating BMM ########')
-                bmm_model = BetaMixture1D(max_iters=10)
-                bmm_model.fit(n_CE_cp)
-                bmm_model.create_lookup(1)
-                print('######## BMM created ########')
+                # print('######## Estimating BMM ########')
+                # bmm_model = BetaMixture1D(max_iters=10)
+                # bmm_model.fit(n_CE_cp)
+                # bmm_model.create_lookup(1)
+                # print('######## BMM created ########')
                 
-                neighbour_CE = (neighbour_CE - bmm_model_minLoss.data.cpu().numpy()) / (bmm_model_maxLoss.data.cpu().numpy() - bmm_model_minLoss.data.cpu().numpy() + 1e-6)
-                neighbour_CE[neighbour_CE >= 1] = 1 - 10e-4
-                neighbour_CE[neighbour_CE <= 0] = 10e-4
+                # neighbour_CE = (neighbour_CE - bmm_model_minLoss.data.cpu().numpy()) / (bmm_model_maxLoss.data.cpu().numpy() - bmm_model_minLoss.data.cpu().numpy() + 1e-6)
+                # neighbour_CE[neighbour_CE >= 1] = 1 - 10e-4
+                # neighbour_CE[neighbour_CE <= 0] = 10e-4
                 
-                for i in range(500):
+                # for i in range(500):
                     
-                    B = bmm_model.look_lookup(neighbour_CE[i*100:(i*100)+100], bmm_model_maxLoss, bmm_model_minLoss,np_array=True)
-                    if i == 0:
-                        B_t = B
-                    else:
-                        B_t = np.concatenate((B_t, B))
+                #     B = bmm_model.look_lookup(neighbour_CE[i*100:(i*100)+100], bmm_model_maxLoss, bmm_model_minLoss,np_array=True)
+                #     if i == 0:
+                #         B_t = B
+                #     else:
+                #         B_t = np.concatenate((B_t, B))
                     
-                B_sorted = np.zeros(len(B_t))
-                B_sorted[all_index.cpu().numpy()] = B_t
+                # B_sorted = np.zeros(len(B_t))
+                # B_sorted[all_index.cpu().numpy()] = B_t
                 
         else:
             torch.cuda.empty_cache()
 
     return all_losses.data.numpy()
+
+def bmm_probs(neighbour_CE,all_index,device):
+    ### BMM ###
+    # outliers detection
+    n_CE_cp = np.copy(neighbour_CE)
+    max_perc = np.percentile(n_CE_cp, 95)
+    min_perc = np.percentile(n_CE_cp, 5)
+    n_CE_cp = n_CE_cp[(n_CE_cp<=max_perc) & (n_CE_cp>=min_perc)]
+
+    # "loss" -> we are using CE measure here
+    bmm_model_maxLoss = torch.FloatTensor([max_perc]).to(device)
+    bmm_model_minLoss = torch.FloatTensor([min_perc]).to(device) + 10e-6
+
+    n_CE_cp = (n_CE_cp - bmm_model_minLoss.data.cpu().numpy()) / (bmm_model_maxLoss.data.cpu().numpy() - bmm_model_minLoss.data.cpu().numpy() + 1e-6)
+
+    n_CE_cp[n_CE_cp>=1] = 1-10e-4
+    n_CE_cp[n_CE_cp <= 0] = 10e-4
+
+    print('######## Estimating BMM ########')
+    bmm_model = BetaMixture1D(max_iters=10)
+    bmm_model.fit(n_CE_cp)
+    bmm_model.create_lookup(1)
+    print('######## BMM created ########')
+    
+    neighbour_CE = (neighbour_CE - bmm_model_minLoss.data.cpu().numpy()) / (bmm_model_maxLoss.data.cpu().numpy() - bmm_model_minLoss.data.cpu().numpy() + 1e-6)
+    neighbour_CE[neighbour_CE >= 1] = 1 - 10e-4
+    neighbour_CE[neighbour_CE <= 0] = 10e-4
+    
+    for i in range(round(neighbour_CE.shape[0]/100)):
+        
+        B = bmm_model.look_lookup(neighbour_CE[i*100:(i*100)+100], bmm_model_maxLoss, bmm_model_minLoss,np_array=True)
+        if i == 0:
+            B_t = B
+        else:
+            B_t = np.concatenate((B_t, B))
+        
+    B_sorted = np.zeros(len(B_t))
+    B_sorted[all_index.cpu().numpy()] = B_t
+
 
 def test_cleaning(args, model, device, test_loader):
     model.eval()
