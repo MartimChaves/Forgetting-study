@@ -18,13 +18,14 @@ from datasets.cifar10.cifar10_dataset import get_ssl_dataset
 from utils.ssl_networks import CNN as MT_Net
 from utils.TwoSampler import *
 from utils.utils_ssl import *
+from utils.bmm_model import * 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='command for the first train')
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
     parser.add_argument('--batch_size', type=int, default=100, help='#images in each mini-batch')
     parser.add_argument('--test_batch_size', type=int, default=100, help='#images in each mini-batch')
-    parser.add_argument('--epoch', type=int, default=2, help='training epoches')
+    parser.add_argument('--epoch', type=int, default=1, help='training epoches')
     parser.add_argument('--wd', type=float, default=1e-4, help='weight decay')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--dataset_type', default='semiSup', help='noise type of the dataset')
@@ -67,12 +68,15 @@ def parse_args():
     parser.add_argument('--agree_on_clean', dest='agree_on_clean', default=False, action='store_true', help='if true, indexes of clean samples must be present in all metric vectors')
     parser.add_argument('--balanced_set', dest='balanced_set', default=False, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
     parser.add_argument('--forget', dest='forget', default=False, action='store_true', help='if true, use forget results')
-    parser.add_argument('--relabel', dest='relabel', default=False, action='store_true', help='if true, use relabel results')
+    parser.add_argument('--relabel', dest='relabel', default=True, action='store_true', help='if true, use relabel results')
     parser.add_argument('--parallel', dest='parallel', default=False, action='store_true', help='if true, use parallel results')
+    parser.add_argument('--use_bmm', dest='use_bmm', default=True, action='store_true', help='if true, create sets based on a bmm model')
+    parser.add_argument('--double_run', dest='double_run', default=True, action='store_true', help='if true, run experiment twice')
+    
     args = parser.parse_args()
     return args
 
-def data_config(args, transform_train, transform_test):
+def data_config(args, transform_train, transform_test,device):
     args.val_samples = 0
    
     #trainset, testset, clean_labels, noisy_labels, train_noisy_indexes, train_clean_indexes, valset = get_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset)
@@ -93,6 +97,17 @@ def data_config(args, transform_train, transform_test):
     if args.parallel:
         parallel_arr = np.load("accuracy_measures/parallel.npy")
         metrics.append(parallel_arr)
+        
+    if args.use_bmm:
+        # fit bmm and calculate probs
+        for idx,metric in enumerate(metrics):
+            # change metrics
+            # fit bmm
+            all_index = np.array(range(len(metric)))
+            B_sorted = bmm_probs(metric,all_index,device,indx_np=True)
+            metrics[idx] = B_sorted
+        
+        
     
     trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_dataset(args, transform_train, transform_test, metrics)
     
@@ -139,41 +154,54 @@ def main(args):#, dst_folder):
     ])
 
     # data loader
-    train_loader, test_loader, train_noisy_indexes, percent_clean, nImgs = data_config(args, transform_train, transform_test)#,  dst_folder)
+    train_loader, test_loader, train_noisy_indexes, percent_clean, nImgs = data_config(args, transform_train, transform_test,device)#,  dst_folder)
 
-    model = MT_Net(num_classes = args.num_classes, dropRatio = args.dropout).to(device)
+    # model = MT_Net(num_classes = args.num_classes, dropRatio = args.dropout).to(device)
 
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=1e-4)
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=1e-4)
 
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.M, gamma=0.1)
+    # scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.M, gamma=0.1)
 
-    loss_train_epoch = []
-    loss_val_epoch = []
-    acc_train_per_epoch = []
-    acc_val_per_epoch = []
-    new_labels = []
+    # loss_train_epoch = []
+    # loss_val_epoch = []
+    # acc_train_per_epoch = []
+    # acc_val_per_epoch = []
+    # new_labels = []
 
-    for epoch in range(1, args.epoch + 1):
-        st = time.time()
-        scheduler.step()
-        # train for one epoch
-        print(args.experiment_name, args.labeled_samples)
+    # for epoch in range(1, args.epoch + 1):
+    #     st = time.time()
+    #     scheduler.step()
+    #     # train for one epoch
+    #     print(args.experiment_name, args.labeled_samples)
 
-        loss_per_epoch, top_5_train_ac, top1_train_acc_original_labels, \
-        top1_train_ac, train_time = train_CrossEntropy_partialRelab(\
-                                                        args, model, device, \
-                                                        train_loader, optimizer, \
-                                                        epoch, train_noisy_indexes)
+    #     loss_per_epoch, top_5_train_ac, top1_train_acc_original_labels, \
+    #     top1_train_ac, train_time = train_CrossEntropy_partialRelab(\
+    #                                                     args, model, device, \
+    #                                                     train_loader, optimizer, \
+    #                                                     epoch, train_noisy_indexes)
+    #     loss_train_epoch += [loss_per_epoch]
 
+    #     loss_per_epoch, acc_val_per_epoch_i = testing(args, model, device, test_loader)
 
-        loss_train_epoch += [loss_per_epoch]
-
-        loss_per_epoch, acc_val_per_epoch_i = testing(args, model, device, test_loader)
-
-        loss_val_epoch += loss_per_epoch
-        acc_train_per_epoch += [top1_train_ac]
-        acc_val_per_epoch += acc_val_per_epoch_i
+    #     loss_val_epoch += loss_per_epoch
+    #     acc_train_per_epoch += [top1_train_ac]
+    #     acc_val_per_epoch += acc_val_per_epoch_i
+    
+    model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader)
+    
+    if args.double_run:
+        # re-calculate measure according to original labels
+        loss = track_wrt_original(model,train_loader,device)
+        # re-fit bmm and calculate probs
+        all_index = np.array(range(len(loss)))
+        B_sorted = bmm_probs(loss,all_index,device,indx_np=True)
+        # re-select sets
+        metrics = [B_sorted]
+        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.5)
+        # re-train
+        model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader)
         
+    
     # write to a text file accuracy values
     save_info = "th_"
     # % of chosen images
@@ -213,7 +241,48 @@ def main(args):#, dst_folder):
     plt.title('Loss per epoch - ssl')
     plt.savefig(args.experiment_name + '.png', dpi = 150)
     plt.close()        
+
+def train_stage(args,train_loader,device,train_noisy_indexes,test_loader):
     
+    model = MT_Net(num_classes = args.num_classes, dropRatio = args.dropout).to(device)
+
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=1e-4)
+
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.M, gamma=0.1)
+
+    loss_train_epoch = []
+    loss_val_epoch = []
+    acc_train_per_epoch = []
+    acc_val_per_epoch = []
+    new_labels = []
+
+    for epoch in range(1, args.epoch + 1):
+        st = time.time()
+        scheduler.step()
+        # train for one epoch
+        print(args.experiment_name, args.labeled_samples)
+
+        loss_per_epoch, top_5_train_ac, top1_train_acc_original_labels, \
+        top1_train_ac, train_time = train_CrossEntropy_partialRelab(\
+                                                        args, model, device, \
+                                                        train_loader, optimizer, \
+                                                        epoch, train_noisy_indexes)
+
+
+        loss_train_epoch += [loss_per_epoch]
+
+        loss_per_epoch, acc_val_per_epoch_i = testing(args, model, device, test_loader)
+
+        loss_val_epoch += loss_per_epoch
+        acc_train_per_epoch += [top1_train_ac]
+        acc_val_per_epoch += acc_val_per_epoch_i
+        
+    return model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch
+    
+    
+    
+    
+
 if __name__ == "__main__":
     args = parse_args()
     main(args)

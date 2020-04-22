@@ -71,22 +71,28 @@ def get_dataset(args, transform_train, transform_test, num_classes, noise_ratio,
 
     return cifar_train, testset, cifar_train.clean_labels, cifar_train.noisy_labels, cifar_train.noisy_indexes,  cifar_train.labelsNoisyOriginal
 
-def get_ssl_dataset(args, transform_train, transform_test, metrics):
+def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05):
     num_classes = 10
     cifar_train = Cifar10Train(args, 0.4, num_classes, train=True, transform=transform_train, pslab_transform = transform_test,ssl=True)
     cifar_train.random_in_noise()
     
     th = args.threshold 
-    # trainset, noisy_indexes, clean_indexes
-    # update_labels_randRelab --> needs to work
-    trainset = 0
-    
+        
     temp_clean_indexes = []
+    
+    if args.use_bmm:
+        pass # select samples based on bmm model
+        # fit bmm
+        # calculate probabilities 
+        # select clean(labeled) and noisy (unlabeled) sets
+    else:
+        pass # do it with a threshold
+    
     
     for metric in metrics:
         # organize by ascendent order 
         sorted_indxs_metric = np.argsort(metric)
-        if args.balanced_set:
+        if args.balanced_set and not args.use_bmm:
             # select th number of samples per class
             for sample_class in range(num_classes):
                 # add to clean set
@@ -96,15 +102,18 @@ def get_ssl_dataset(args, transform_train, transform_test, metrics):
                 n = round(len(sorted_class_indxs)*th)
                 temp_clean_indexes.extend(sorted_class_indxs[:n])
         else:
-            n = round(len(cifar_train.labels)*th)
-            temp_clean_indexes.extend(sorted_indxs_metric[:n])
+            if not args.use_bmm:
+                n = round(len(cifar_train.labels)*th)
+                temp_clean_indexes.extend(sorted_indxs_metric[:n])
+            else:
+                temp_clean_indexes.extend(list(np.where(np.array(metric)<bmm_th)[0]))
     
     metrics_arr = np.array(metrics)
     if metrics_arr.shape[0] > 1: # pylint: disable=unsubscriptable-object
         if args.agree_on_clean:
             temp_clean_indx_arr = np.array(temp_clean_indexes)
             values, count = np.unique(temp_clean_indx_arr,return_counts=True) 
-            train_clean_indexes = values[count>1] 
+            train_clean_indexes = values[count>metrics_arr.shape[0]-1] #pylint: disable=unsubscriptable-object
         else:
             train_clean_indexes = np.array(list(set(temp_clean_indexes)))
     else:

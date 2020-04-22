@@ -144,11 +144,8 @@ def track_training_loss_plus(args, model, device, train_loader, epoch, fixed_las
             
             #if last epoch -> save bmm probs
             if calcBmm: # save on step counter, not epoch
-                
                 B_sorted = bmm_probs(neighbour_CE,all_index,device) #pylint: disable=undefined-variable
 
-                print()
-                
         else:
             torch.cuda.empty_cache()
 

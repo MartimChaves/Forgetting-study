@@ -104,7 +104,7 @@ class BetaMixture1D(object):
         return 'BetaMixture1D(w={}, a={}, b={})'.format(self.weight, self.alphas, self.betas)
     
     
-def bmm_probs(neighbour_CE,all_index,device):
+def bmm_probs(neighbour_CE,all_index,device,indx_np=False):
     ### BMM ###
     # outliers detection
     n_CE_cp = np.copy(neighbour_CE)
@@ -140,6 +140,9 @@ def bmm_probs(neighbour_CE,all_index,device):
             B_t = np.concatenate((B_t, B))
         
     B_sorted = np.zeros(len(B_t))
-    B_sorted[all_index.cpu().numpy()] = B_t
+    if indx_np:
+        B_sorted[all_index] = B_t
+    else:
+        B_sorted[all_index.cpu().numpy()] = B_t
     
     return B_sorted

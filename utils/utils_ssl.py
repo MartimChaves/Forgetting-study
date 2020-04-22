@@ -10,7 +10,7 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 #from .utils import accuracy_v2
-from .AverageMeter import AverageMeter
+from utils.AverageMeter import AverageMeter #pylint: disable=no-name-in-module,import-error
 import time
 import warnings
 warnings.filterwarnings('ignore')
@@ -24,6 +24,38 @@ from math import cos
 
 import sklearn.decomposition as sk
 from sklearn.metrics import roc_curve, auc
+
+def track_wrt_original(model,train_loader,device):
+    
+    model.eval()
+    
+    with torch.no_grad():
+        all_losses_t = torch.Tensor().to(device)
+        all_index = torch.LongTensor().to(device)
+        
+        for imgs, img_pslab, labels, soft_labels, index in train_loader:
+            
+            imgs, index = imgs.to(device), index.to(device)
+            
+            clean_targets = torch.from_numpy(train_loader.dataset.clean_labels)[index]
+            target = clean_targets.to(device)
+            
+            prediction_preSoft = model(imgs)
+            
+            prediction = F.log_softmax(prediction_preSoft, dim=1)
+
+            # Losses
+            idx_loss = F.nll_loss(prediction, target, reduction = 'none')
+            idx_loss.detach_()
+
+            all_index = torch.cat((all_index, index))
+            all_losses_t = torch.cat((all_losses_t, idx_loss))
+        
+    
+        all_losses = torch.zeros(all_losses_t.size())
+        all_losses[all_index.cpu()] = all_losses_t.data.cpu()
+    
+    return all_losses.data.numpy()
 
 def mixup_data(x, y, alpha=1.0, device='cuda'):
     '''Returns mixed inputs, pairs of targets, and lambda'''
@@ -84,6 +116,7 @@ def train_CrossEntropy_partialRelab(args, model, device, train_loader, optimizer
     counter = 1
 
     for imgs, img_pslab, labels, soft_labels, index in train_loader:
+              
         images = imgs.to(device)
         labels = labels.to(device)
         soft_labels = soft_labels.to(device)
