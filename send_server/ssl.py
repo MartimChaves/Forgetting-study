@@ -14,7 +14,7 @@ import logging
 import os
 import time
 
-from datasets.cifar10.cifar10_dataset import get_ssl_dataset, get_dataset as get_cifar10_dataset
+from datasets.cifar10.cifar10_dataset import get_ssl_dataset
 from utils.ssl_networks import CNN as MT_Net
 from utils.TwoSampler import *
 from utils.utils_ssl import *
@@ -191,14 +191,7 @@ def main(args):#, dst_folder):
     
     if args.double_run:
         # re-calculate measure according to original labels
-        num_classes = 10
-        noise_ratio = 0.40
-        noise_type = "random_in_noise"
-        first_stage = True
-        subset = []
-        trainset_measure, _, _, _, _, _ = get_cifar10_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset,ssl=True)
-        train_loader_measure = torch.utils.data.DataLoader(trainset_measure, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
-        loss = track_wrt_original(model,train_loader_measure,device)
+        loss = track_wrt_original(model,train_loader,device)
         # re-fit bmm and calculate probs
         all_index = np.array(range(len(loss)))
         B_sorted = bmm_probs(loss,all_index,device,indx_np=True)
