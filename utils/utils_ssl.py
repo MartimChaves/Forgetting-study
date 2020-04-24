@@ -1,4 +1,7 @@
 from __future__ import print_function
+
+import faiss
+
 import argparse
 import torch
 import torch.nn as nn
@@ -25,7 +28,7 @@ from math import cos
 import sklearn.decomposition as sk
 from sklearn.metrics import roc_curve, auc
 
-def track_wrt_original(model,train_loader,device):
+def track_wrt_original(args,model,train_loader,device):
     
     model.eval()
     
@@ -50,12 +53,13 @@ def track_wrt_original(model,train_loader,device):
 
             all_index = torch.cat((all_index, index))
             all_losses_t = torch.cat((all_losses_t, idx_loss))
-        
     
         all_losses = torch.zeros(all_losses_t.size())
         all_losses[all_index.cpu()] = all_losses_t.data.cpu()
     
     return all_losses.data.numpy()
+
+        
 
 def mixup_data(x, y, alpha=1.0, device='cuda'):
     '''Returns mixed inputs, pairs of targets, and lambda'''

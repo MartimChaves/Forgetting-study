@@ -64,14 +64,17 @@ def parse_args():
     parser.add_argument('--DApseudolab', type=str, default="False", help='Apply data augmentation when computing pseudolabels')
     parser.add_argument('--DA', type=str, default='standard', help='Choose the type of DA')
 
-    parser.add_argument('--threshold', type=int, default=0.20, help='Percentage of samples to consider clean')
+    parser.add_argument('--threshold', type=float, default=0.20, help='Percentage of samples to consider clean')
+    parser.add_argument('--bmm_th', type=float, default=0.05, help='Probability threshold to consider samples when using bmm')
+    parser.add_argument('--threshold_2nd', type=float, default=0.20, help='Percentage of samples to consider clean - when in 2nd stage')
+    parser.add_argument('--bmm_th_2nd', type=float, default=0.05, help='Probability threshold to consider samples when using bmm - when in 2nd stage')
     parser.add_argument('--agree_on_clean', dest='agree_on_clean', default=False, action='store_true', help='if true, indexes of clean samples must be present in all metric vectors')
     parser.add_argument('--balanced_set', dest='balanced_set', default=False, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
     parser.add_argument('--forget', dest='forget', default=False, action='store_true', help='if true, use forget results')
-    parser.add_argument('--relabel', dest='relabel', default=True, action='store_true', help='if true, use relabel results')
+    parser.add_argument('--relabel', dest='relabel', default=False, action='store_true', help='if true, use relabel results')
     parser.add_argument('--parallel', dest='parallel', default=False, action='store_true', help='if true, use parallel results')
-    parser.add_argument('--use_bmm', dest='use_bmm', default=True, action='store_true', help='if true, create sets based on a bmm model')
-    parser.add_argument('--double_run', dest='double_run', default=True, action='store_true', help='if true, run experiment twice')
+    parser.add_argument('--use_bmm', dest='use_bmm', default=False, action='store_true', help='if true, create sets based on a bmm model')
+    parser.add_argument('--double_run', dest='double_run', default=False, action='store_true', help='if true, run experiment twice')
     
     args = parser.parse_args()
     return args
@@ -79,12 +82,6 @@ def parse_args():
 def data_config(args, transform_train, transform_test,device):
     args.val_samples = 0
    
-    #trainset, testset, clean_labels, noisy_labels, train_noisy_indexes, train_clean_indexes, valset = get_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset)
-
-    # load data of meticrs results and select clean and noisy samples
-    
-    # We need: trainset (aka dataset itself); noisy_indexes; clean_indexes
-    # update_labels_randRelab to work
     metrics = []
     if args.forget:
         forget_arr = np.load("accuracy_measures/forget.npy")
@@ -106,10 +103,8 @@ def data_config(args, transform_train, transform_test,device):
             all_index = np.array(range(len(metric)))
             B_sorted = bmm_probs(metric,all_index,device,indx_np=True)
             metrics[idx] = B_sorted
-        
-        
     
-    trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_dataset(args, transform_train, transform_test, metrics)
+    trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold )
     
     #train_clean_indexes = trainset.clean_indexes
     batch_sampler = TwoStreamBatchSampler(train_noisy_indexes, train_clean_indexes, args.batch_size, args.labeled_batch_size) 
@@ -155,37 +150,6 @@ def main(args):#, dst_folder):
 
     # data loader
     train_loader, test_loader, train_noisy_indexes, percent_clean, nImgs = data_config(args, transform_train, transform_test,device)#,  dst_folder)
-
-    # model = MT_Net(num_classes = args.num_classes, dropRatio = args.dropout).to(device)
-
-    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=1e-4)
-
-    # scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.M, gamma=0.1)
-
-    # loss_train_epoch = []
-    # loss_val_epoch = []
-    # acc_train_per_epoch = []
-    # acc_val_per_epoch = []
-    # new_labels = []
-
-    # for epoch in range(1, args.epoch + 1):
-    #     st = time.time()
-    #     scheduler.step()
-    #     # train for one epoch
-    #     print(args.experiment_name, args.labeled_samples)
-
-    #     loss_per_epoch, top_5_train_ac, top1_train_acc_original_labels, \
-    #     top1_train_ac, train_time = train_CrossEntropy_partialRelab(\
-    #                                                     args, model, device, \
-    #                                                     train_loader, optimizer, \
-    #                                                     epoch, train_noisy_indexes)
-    #     loss_train_epoch += [loss_per_epoch]
-
-    #     loss_per_epoch, acc_val_per_epoch_i = testing(args, model, device, test_loader)
-
-    #     loss_val_epoch += loss_per_epoch
-    #     acc_train_per_epoch += [top1_train_ac]
-    #     acc_val_per_epoch += acc_val_per_epoch_i
     
     model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader)
     
@@ -198,16 +162,20 @@ def main(args):#, dst_folder):
         subset = []
         trainset_measure, _, _, _, _, _ = get_cifar10_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset,ssl=True)
         train_loader_measure = torch.utils.data.DataLoader(trainset_measure, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
-        loss = track_wrt_original(model,train_loader_measure,device)
-        # re-fit bmm and calculate probs
-        all_index = np.array(range(len(loss)))
-        B_sorted = bmm_probs(loss,all_index,device,indx_np=True)
-        # re-select sets
-        metrics = [B_sorted]
-        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.5)
+               
+        loss= track_wrt_original(args,model,train_loader_measure,device)
+        if args.use_bmm:
+            # re-fit bmm and calculate probs
+            all_index = np.array(range(len(loss)))
+            B_sorted_l = bmm_probs(loss,all_index,device,indx_np=True)
+            # re-select sets
+            metrics = [B_sorted_l]
+        else:
+            metrics = [loss]
+        
+        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd )
         # re-train
         model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader)
-        
     
     # write to a text file accuracy values
     save_info = "th_"
@@ -261,7 +229,6 @@ def train_stage(args,train_loader,device,train_noisy_indexes,test_loader):
     loss_val_epoch = []
     acc_train_per_epoch = []
     acc_val_per_epoch = []
-    new_labels = []
 
     for epoch in range(1, args.epoch + 1):
         st = time.time()
@@ -275,7 +242,6 @@ def train_stage(args,train_loader,device,train_noisy_indexes,test_loader):
                                                         train_loader, optimizer, \
                                                         epoch, train_noisy_indexes)
 
-
         loss_train_epoch += [loss_per_epoch]
 
         loss_per_epoch, acc_val_per_epoch_i = testing(args, model, device, test_loader)
@@ -285,10 +251,6 @@ def train_stage(args,train_loader,device,train_noisy_indexes,test_loader):
         acc_val_per_epoch += acc_val_per_epoch_i
         
     return model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch
-    
-    
-    
-    
 
 if __name__ == "__main__":
     args = parse_args()

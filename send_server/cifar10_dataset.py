@@ -9,11 +9,11 @@ import random
 import time
 from IPython import embed
 
-def get_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset):
+def get_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset,ssl=False):
     # prepare datasets
 
     #################################### Train set #############################################
-    cifar_train = Cifar10Train(args, noise_ratio, num_classes, first_stage, train=True, transform=transform_train, pslab_transform = transform_test,subset=subset)
+    cifar_train = Cifar10Train(args, noise_ratio, num_classes, first_stage, train=True, transform=transform_train, pslab_transform = transform_test,subset=subset,ssl=ssl)
 
     #################################### Noise corruption ######################################
     if noise_type == 'random_in_noise':
@@ -66,7 +66,7 @@ def get_dataset(args, transform_train, transform_test, num_classes, noise_ratio,
 
     #################################### Test set #############################################
     #testset = tv.datasets.CIFAR10(root='./data', train=False, download=False, transform=transform_test)
-    testset = Cifar10Test(root='./data', train=False, transform=transform_test, subset=subset)
+    testset = Cifar10Test(root=args.train_root, train=False, transform=transform_test, subset=subset)
     ###########################################################################################
 
     return cifar_train, testset, cifar_train.clean_labels, cifar_train.noisy_labels, cifar_train.noisy_indexes,  cifar_train.labelsNoisyOriginal

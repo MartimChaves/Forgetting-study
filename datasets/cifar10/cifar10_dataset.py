@@ -71,23 +71,12 @@ def get_dataset(args, transform_train, transform_test, num_classes, noise_ratio,
 
     return cifar_train, testset, cifar_train.clean_labels, cifar_train.noisy_labels, cifar_train.noisy_indexes,  cifar_train.labelsNoisyOriginal
 
-def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05):
+def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05,th=0.20):
     num_classes = 10
     cifar_train = Cifar10Train(args, 0.4, num_classes, train=True, transform=transform_train, pslab_transform = transform_test,ssl=True)
     cifar_train.random_in_noise()
     
-    th = args.threshold 
-        
     temp_clean_indexes = []
-    
-    if args.use_bmm:
-        pass # select samples based on bmm model
-        # fit bmm
-        # calculate probabilities 
-        # select clean(labeled) and noisy (unlabeled) sets
-    else:
-        pass # do it with a threshold
-    
     
     for metric in metrics:
         # organize by ascendent order 
