@@ -64,10 +64,12 @@ def parse_args():
     parser.add_argument('--DApseudolab', type=str, default="False", help='Apply data augmentation when computing pseudolabels')
     parser.add_argument('--DA', type=str, default='standard', help='Choose the type of DA')
 
+    parser.add_argument('--noise_ratio', type=float, default=0.4, help='noise ratio for the first stage of training')
+    parser.add_argument('--noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--threshold', type=float, default=0.20, help='Percentage of samples to consider clean')
     parser.add_argument('--bmm_th', type=float, default=0.05, help='Probability threshold to consider samples when using bmm')
     parser.add_argument('--threshold_2nd', type=float, default=0.20, help='Percentage of samples to consider clean - when in 2nd stage')
-    parser.add_argument('--bmm_th_2nd', type=float, default=0.05, help='Probability threshold to consider samples when using bmm - when in 2nd stage')
+    parser.add_argument('--bmm_th_2nd', type=float, default=0.50, help='Probability threshold to consider samples when using bmm - when in 2nd stage')
     parser.add_argument('--agree_on_clean', dest='agree_on_clean', default=False, action='store_true', help='if true, indexes of clean samples must be present in all metric vectors')
     parser.add_argument('--balanced_set', dest='balanced_set', default=False, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
     parser.add_argument('--forget', dest='forget', default=False, action='store_true', help='if true, use forget results')
@@ -155,13 +157,15 @@ def main(args):#, dst_folder):
     
     if args.double_run:
         # re-calculate measure according to original labels
-        num_classes = 10
-        noise_ratio = 0.40
-        noise_type = "random_in_noise"
-        first_stage = True
-        subset = []
-        trainset_measure, _, _, _, _, _ = get_cifar10_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset,ssl=True)
-        train_loader_measure = torch.utils.data.DataLoader(trainset_measure, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
+        num_classes = args.num_classes #10
+        noise_ratio = args.noise_ratio#0.40
+        noise_type = args.noise_type #"random_in_noise"
+        
+        if args.dataset == "cifar10":
+            first_stage = True
+            subset = []
+            trainset_measure, _, _, _, _, _ = get_cifar10_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset,ssl=True)
+            train_loader_measure = torch.utils.data.DataLoader(trainset_measure, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
                
         loss= track_wrt_original(args,model,train_loader_measure,device)
         if args.use_bmm:

@@ -8,13 +8,13 @@ python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --parallel --balance
 python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --balanced_set --experiment_name ssl_soloF_balanced x
 python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --relabel --balanced_set --experiment_name ssl_soloR_balanced x
 
-python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --parallel --balanced_set --experiment_name ssl_FP_balanced
-python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --relabel --balanced_set --experiment_name ssl_FR_balanced
-python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --parallel --relabel --balanced_set --experiment_name ssl_PR_balanced
+python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --parallel --balanced_set --experiment_name ssl_FP_balanced x
+python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --relabel --balanced_set --experiment_name ssl_FR_balanced x
+python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --parallel --relabel --balanced_set --experiment_name ssl_PR_balanced x
 
-python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --parallel --balanced_set --agree_on_clean --experiment_name ssl_FP_balanced_agree
-python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --relabel --balanced_set --agree_on_clean --experiment_name ssl_FR_balanced_agree 
-python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --parallel --relabel --balanced_set --agree_on_clean --experiment_name ssl_PR_balanced_agree
+python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --parallel --balanced_set --agree_on_clean --experiment_name ssl_FP_balanced_agree x
+python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --relabel --balanced_set --agree_on_clean --experiment_name ssl_FR_balanced_agree x
+python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --parallel --relabel --balanced_set --agree_on_clean --experiment_name ssl_PR_balanced_agree x
 
 python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --parallel --agree_on_clean --experiment_name ssl_FP_agree
 python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --relabel --agree_on_clean --experiment_name ssl_FR_agree
@@ -30,7 +30,7 @@ python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --experimen
 python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --relabel --experiment_name ssl_soloRelabel_th0.1 --threshold 0.10
 
 python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --parallel --balanced_set --experiment_name ssl_soloP_balanced_th0.1 --threshold 0.10
-python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --balanced_set --experiment_name ssl_soloF_balanced_th0.1 --threshold 0.10
+python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --balanced_set --experiment_name ssl_soloF_balanced_th0.1 --threshold 0.10 x +th0.4
 python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --relabel --balanced_set --experiment_name ssl_soloR_balanced_th0.1 --threshold 0.10
 
 python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --parallel --balanced_set --experiment_name ssl_FP_balanced_th0.1 --threshold 0.10

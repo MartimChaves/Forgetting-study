@@ -13,6 +13,7 @@ from datasets.cifar100.cifar100_dataset import get_dataset as get_cifar100_datas
 from torchvision import datasets as torch_datasets
 from utils.utils_relabel import * 
 import utils.models as mod
+from utils.ssl_networks import *
 
 import time
 def parse_args():
@@ -38,6 +39,7 @@ def parse_args():
     parser.add_argument('--first_stage_noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--first_stage_data_name', type=str, default='cifar10', help='Dataset to use in the first stage of model training')
     parser.add_argument('--first_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
+    parser.add_argument('--model_type', type=str, default='13-CNN', help='Model structure to use, select between: preactResNet18, 13-CNN')
     
     parser.add_argument('--reg_term1', type=float, default=0.8, help='alpha hyperparameter for regularization component Lp (relabeling)')
     parser.add_argument('--reg_term2', type=float, default=0.4, help='beta hyperparameter for regularization component Le (relabeling)')
@@ -194,8 +196,14 @@ def main(args):
     loss_per_epoch_train_1st = []
     # load model # first_stage_num_classes
     if args.first_stage_data_name == 'cifar10' or args.first_stage_data_name == 'svhn' or args.first_stage_data_name == 'cifar100':
-        model = mod.PreActResNet18(num_classes_first_stage=args.first_stage_num_classes,num_classes_second_stage=args.second_stage_num_classes).to(device)
-    
+        if args.model_type == "preactResNet18":
+            model = mod.PreActResNet18(num_classes_first_stage=args.first_stage_num_classes,num_classes_second_stage=args.second_stage_num_classes).to(device)
+        elif args.model_type == "13-CNN":
+            model = CNN(num_classes=args.first_stage_num_classes).to(device)
+        else:
+            print("Model type not recognized.")
+            return
+        
     # optimizer
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.M, gamma=args.gamma_scheduler)

@@ -34,13 +34,13 @@ def track_training_loss_plus(args, model, device, train_loader, epoch, fixed_las
 
         ###########################################################################################
         # Prepare model to study layer 4 features
-        activation = {}
-        def get_activation(name):
-            def hook(model, input, output):
-                activation[name] = output.detach()
-            return hook
+        # activation = {}
+        # def get_activation(name):
+        #     def hook(model, input, output):
+        #         activation[name] = output.detach()
+        #     return hook
 
-        model.layer4.register_forward_hook(get_activation("layer4"))
+        # model.layer4.register_forward_hook(get_activation("layer4"))
         
         for batch_idx, (data, _, soft_labels, index, target, _ ,_) in enumerate(train_loader):
 
@@ -63,10 +63,10 @@ def track_training_loss_plus(args, model, device, train_loader, epoch, fixed_las
             all_losses_t = torch.cat((all_losses_t, idx_loss))
             
             # features from Layer 4
-            prediction_L4 = activation['layer4']
-            prediction_L4 = F.adaptive_avg_pool2d(prediction_L4, (1, 1))
+            # prediction_L4 = activation['layer4']
+            # prediction_L4 = F.adaptive_avg_pool2d(prediction_L4, (1, 1))
             
-            all_pred_L4 = torch.cat((all_pred_L4, prediction_L4))
+            # all_pred_L4 = torch.cat((all_pred_L4, prediction_L4))
             
 
             if counter % 15 == 0:
