@@ -230,7 +230,9 @@ def main(args):
         ce_concat = np.concatenate((cross_cE_track_1[-1],cross_cE_track_2[-1]))
         label_concat = np.concatenate((train_loader_1.dataset.labels,train_loader_2.dataset.labels))
         ce_and_labels = np.array(ce_concat)
-        np.save("accuracy_measures/parallel.npy",ce_and_labels)
+        
+        array_name = "parallel_" + str(args.first_stage_noise_ration) + "_" + str(args.first_stage_noise_type) + "_" + str(args.first_stage_data_name)
+        np.save("accuracy_measures/" + array_name + ".npy",ce_and_labels)
         
 def plot_loss_CE_acc(args,loss_per_epoch_train,cE_track,noisy_indexes,clean_labels,acc_train_per_epoch,acc_val_per_epoch):
     

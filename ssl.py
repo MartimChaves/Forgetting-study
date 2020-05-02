@@ -86,15 +86,18 @@ def data_config(args, transform_train, transform_test,device):
    
     metrics = []
     if args.forget:
-        forget_arr = np.load("accuracy_measures/forget.npy")
+        forget_arr_name = "forget_" + str(args.noise_ratio) + "_" + str(args.noise_type) + "_" + str(args.dataset)
+        forget_arr = np.load("accuracy_measures/" + forget_arr_name + ".npy")
         metrics.append(forget_arr)
     
     if args.relabel:
-        relabel_arr = np.load("accuracy_measures/relabel.npy")
+        relabel_arr_name = "relabel_" + str(args.noise_ratio) + "_" + str(args.noise_type) + "_" + str(args.dataset)
+        relabel_arr = np.load("accuracy_measures/" + relabel_arr_name + ".npy")
         metrics.append(relabel_arr)
     
     if args.parallel:
-        parallel_arr = np.load("accuracy_measures/parallel.npy")
+        parallel_arr_name = "parallel_" + str(args.noise_ratio) + "_" + str(args.noise_type) + "_" + str(args.dataset)
+        parallel_arr = np.load("accuracy_measures/" + parallel_arr_name + ".npy")
         metrics.append(parallel_arr)
         
     if args.use_bmm:
@@ -176,6 +179,8 @@ def main(args):#, dst_folder):
             metrics = [B_sorted_l]
         else:
             metrics = [loss]
+            
+        # create save info function
         
         trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd )
         # re-train
@@ -255,6 +260,35 @@ def train_stage(args,train_loader,device,train_noisy_indexes,test_loader):
         acc_val_per_epoch += acc_val_per_epoch_i
         
     return model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch
+
+def save_info_update(args,save_info,percent_clean,nImgs,top1_train_ac):
+    
+    if not save_info:
+        save_info = "th_"
+        
+    # % of chosen images
+    save_info = save_info + str(args.threshold) + "_percentClean_" + str(percent_clean) + "_noImages_" + str(nImgs) + "_"
+    # agree
+    if args.agree_on_clean:
+        save_info = save_info + "agreeOnClean" + "_"
+    # balanced set
+    if args.balanced_set:
+        save_info = save_info + "balancedSet" + "_"
+    # forget
+    if args.forget:
+        save_info = save_info + "forget" + "_"
+    # relabel
+    if args.relabel:
+        save_info = save_info + "relabel" + "_"
+    # parallel
+    if args.parallel:
+        save_info = save_info + "parallel" + "_"
+    
+    save_info = save_info + "accRes_" + str(round(top1_train_ac,5)) 
+    
+    
+    return save_info
+
 
 if __name__ == "__main__":
     args = parse_args()

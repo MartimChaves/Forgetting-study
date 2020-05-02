@@ -396,7 +396,8 @@ def main(args):
 
     if args.track_CE:
         ce_and_labels = np.array(second_stage_CE_track[-1])
-        np.save("accuracy_measures/forget.npy",ce_and_labels)
+        array_name = "forget_" + str(args.first_stage_noise_ration) + "_" + str(args.first_stage_noise_type) + "_" + str(args.first_stage_data_name)
+        np.save("accuracy_measures/" + array_name + ".npy",ce_and_labels)
     
     # plot histogram
     # get index of 20% of highest losses
