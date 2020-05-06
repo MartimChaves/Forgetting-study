@@ -14,7 +14,7 @@ import logging
 import os
 import time
 
-from datasets.cifar10.cifar10_dataset import get_ssl_dataset, get_dataset as get_cifar10_dataset
+from datasets.cifar10.cifar10_dataset import get_ssl_dataset as get_ssl_cifar10_dataset, get_dataset as get_cifar10_dataset
 from utils.ssl_networks import CNN as MT_Net
 from utils.TwoSampler import *
 from utils.utils_ssl import *
@@ -52,7 +52,7 @@ def parse_args():
     parser.add_argument('--Mixup_Alpha', type=float, default=1, help='alpha value for the beta dist from mixup')
     parser.add_argument('--cuda_dev', type=int, default=0, help='set to 1 to choose the second gpu')
     parser.add_argument('--save_checkpoint', type=str, default= "False", help='save checkpoints for ensembles')
-    parser.add_argument('--dataset', type=str, default='cifar10', help='Daraset name')
+    parser.add_argument('--dataset', type=str, default='cifar100', help='Daraset name')
     parser.add_argument('--swa', type=str, default='True', help='Apply SWA')
     parser.add_argument('--swa_start', type=int, default=350, help='Start SWA')
     parser.add_argument('--swa_freq', type=float, default=5, help='Frequency')
@@ -73,7 +73,7 @@ def parse_args():
     parser.add_argument('--agree_on_clean', dest='agree_on_clean', default=False, action='store_true', help='if true, indexes of clean samples must be present in all metric vectors')
     parser.add_argument('--balanced_set', dest='balanced_set', default=False, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
     parser.add_argument('--forget', dest='forget', default=False, action='store_true', help='if true, use forget results')
-    parser.add_argument('--relabel', dest='relabel', default=False, action='store_true', help='if true, use relabel results')
+    parser.add_argument('--relabel', dest='relabel', default=True, action='store_true', help='if true, use relabel results')
     parser.add_argument('--parallel', dest='parallel', default=False, action='store_true', help='if true, use parallel results')
     parser.add_argument('--use_bmm', dest='use_bmm', default=False, action='store_true', help='if true, create sets based on a bmm model')
     parser.add_argument('--double_run', dest='double_run', default=False, action='store_true', help='if true, run experiment twice')
@@ -109,13 +109,18 @@ def data_config(args, transform_train, transform_test,device):
             B_sorted = bmm_probs(metric,all_index,device,indx_np=True)
             metrics[idx] = B_sorted
     
-    trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold )
-    
+    if args.dataset == "cifar10":
+        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold )
+        testset = datasets.CIFAR10(root='./datasets/cifar10/data', train=False, download=False, transform=transform_test)
+    elif args.dataset == "cifar100":
+        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold )
+        testset = datasets.CIFAR10(root='./datasets/cifar10/data', train=False, download=False, transform=transform_test)
+        
     #train_clean_indexes = trainset.clean_indexes
     batch_sampler = TwoStreamBatchSampler(train_noisy_indexes, train_clean_indexes, args.batch_size, args.labeled_batch_size) 
     train_loader = torch.utils.data.DataLoader(trainset, batch_sampler=batch_sampler, num_workers=0, pin_memory=True)
 
-    testset = datasets.CIFAR10(root='./datasets/cifar10/data', train=False, download=False, transform=transform_test)
+    
     test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
     return train_loader, test_loader, train_noisy_indexes, percent_clean, nImgs
@@ -158,6 +163,8 @@ def main(args):#, dst_folder):
     
     model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader)
     
+    # noisy clean graph here
+    
     if args.double_run:
         # re-calculate measure according to original labels
         num_classes = args.num_classes #10
@@ -181,8 +188,11 @@ def main(args):#, dst_folder):
             metrics = [loss]
             
         # create save info function
+        if args.dataset == "cifar10":
+            trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd )
+        elif args.dataset == "cifar100":
+            trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd )
         
-        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd )
         # re-train
         model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader)
     

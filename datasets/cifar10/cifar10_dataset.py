@@ -73,9 +73,16 @@ def get_dataset(args, transform_train, transform_test, num_classes, noise_ratio,
 
 def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05,th=0.20):
     num_classes = 10
-    cifar_train = Cifar10Train(args, 0.4, num_classes, train=True, transform=transform_train, pslab_transform = transform_test,ssl=True)
-    cifar_train.random_in_noise()
+    cifar_train = Cifar10Train(args, args.noise_ratio, num_classes, train=True, transform=transform_train, pslab_transform = transform_test,ssl=True)
     
+    if args.noise_type == "random_in_noise":
+        cifar_train.random_in_noise()
+    elif args.noise_type == "real_in_noise":
+        cifar_train.real_in_noise([])
+    else:
+        print("Noise type not recognized.")
+        return
+        
     temp_clean_indexes = []
     
     for metric in metrics:
