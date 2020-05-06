@@ -15,6 +15,7 @@ import os
 import time
 
 from datasets.cifar10.cifar10_dataset import get_ssl_dataset as get_ssl_cifar10_dataset, get_dataset as get_cifar10_dataset
+from datasets.cifar100.cifar100_dataset import get_ssl_dataset as get_ssl_cifar100_dataset, get_dataset as get_cifar100_dataset
 from utils.ssl_networks import CNN as MT_Net
 from utils.TwoSampler import *
 from utils.utils_ssl import *
@@ -64,6 +65,7 @@ def parse_args():
     parser.add_argument('--DApseudolab', type=str, default="False", help='Apply data augmentation when computing pseudolabels')
     parser.add_argument('--DA', type=str, default='standard', help='Choose the type of DA')
 
+    parser.add_argument('--subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     parser.add_argument('--noise_ratio', type=float, default=0.4, help='noise ratio for the first stage of training')
     parser.add_argument('--noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--threshold', type=float, default=0.20, help='Percentage of samples to consider clean')
@@ -113,8 +115,7 @@ def data_config(args, transform_train, transform_test,device):
         trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold )
         testset = datasets.CIFAR10(root='./datasets/cifar10/data', train=False, download=False, transform=transform_test)
     elif args.dataset == "cifar100":
-        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold )
-        testset = datasets.CIFAR10(root='./datasets/cifar10/data', train=False, download=False, transform=transform_test)
+        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs, testset = get_ssl_cifar100_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold )
         
     #train_clean_indexes = trainset.clean_indexes
     batch_sampler = TwoStreamBatchSampler(train_noisy_indexes, train_clean_indexes, args.batch_size, args.labeled_batch_size) 
@@ -128,6 +129,7 @@ def data_config(args, transform_train, transform_test,device):
 def main(args):#, dst_folder):
     # best_ac only record the best top1_ac for validation set.
     best_ac = 0.0
+    save_info = ""
     # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     if args.cuda_dev == 0 or args.cuda_dev == 1:
         torch.cuda.set_device(args.cuda_dev)
@@ -163,6 +165,7 @@ def main(args):#, dst_folder):
     
     model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader)
     
+    save_info = save_info_update(args,save_info,percent_clean,nImgs,top1_train_ac)
     # noisy clean graph here
     
     if args.double_run:
@@ -176,6 +179,8 @@ def main(args):#, dst_folder):
             subset = []
             trainset_measure, _, _, _, _, _ = get_cifar10_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset,ssl=True)
             train_loader_measure = torch.utils.data.DataLoader(trainset_measure, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
+        elif args.dataset == "cifar100":
+            pass               
                
         loss= track_wrt_original(args,model,train_loader_measure,device)
         if args.use_bmm:
@@ -191,32 +196,35 @@ def main(args):#, dst_folder):
         if args.dataset == "cifar10":
             trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd )
         elif args.dataset == "cifar100":
-            trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd )
+            trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar100_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd )
         
         # re-train
         model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader)
+
+        save_info = save_info_update(args,save_info,percent_clean,nImgs,top1_train_ac)
+    # # write to a text file accuracy values
+    # save_info = "th_"
+    # # % of chosen images
+    # save_info = save_info + str(args.threshold) + "_percentClean_" + str(percent_clean) + "_noImages_" + str(nImgs) + "_"
+    # # agree
+    # if args.agree_on_clean:
+    #     save_info = save_info + "agreeOnClean" + "_"
+    # # balanced set
+    # if args.balanced_set:
+    #     save_info = save_info + "balancedSet" + "_"
+    # # forget
+    # if args.forget:
+    #     save_info = save_info + "forget" + "_"
+    # # relabel
+    # if args.relabel:
+    #     save_info = save_info + "relabel" + "_"
+    # # parallel
+    # if args.parallel:
+    #     save_info = save_info + "parallel" + "_"
     
-    # write to a text file accuracy values
-    save_info = "th_"
-    # % of chosen images
-    save_info = save_info + str(args.threshold) + "_percentClean_" + str(percent_clean) + "_noImages_" + str(nImgs) + "_"
-    # agree
-    if args.agree_on_clean:
-        save_info = save_info + "agreeOnClean" + "_"
-    # balanced set
-    if args.balanced_set:
-        save_info = save_info + "balancedSet" + "_"
-    # forget
-    if args.forget:
-        save_info = save_info + "forget" + "_"
-    # relabel
-    if args.relabel:
-        save_info = save_info + "relabel" + "_"
-    # parallel
-    if args.parallel:
-        save_info = save_info + "parallel" + "_"
+    # save_info = save_info + "accRes_" + str(round(top1_train_ac,5)) 
     
-    save_info = save_info + "accRes_" + str(round(top1_train_ac,5)) 
+    
     
     path_file = open("accuracy_measures/acc_results.txt","a") 
     path_file.write(save_info + "\n")
