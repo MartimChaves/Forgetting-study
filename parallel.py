@@ -8,6 +8,7 @@ import random
 from sklearn.metrics import roc_curve, auc
 
 from datasets.cifar10.cifar10_dataset import get_parallel_datasets as get_cifar10_parallel_datasets
+from datasets.cifar100.cifar100_dataset import get_parallel_datasets as get_cifar100_parallel_datasets
 from datasets.svhn.svhn import get_dataset as get_svhn_dataset
 from datasets.cifar100.cifar100_dataset import get_dataset as get_cifar100_dataset
 from torchvision import datasets as torch_datasets
@@ -35,7 +36,7 @@ def parse_args():
     
     parser.add_argument('--first_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
     parser.add_argument('--first_stage_noise_ration', type=float, default=0.4, help='noise ratio for the first stage of training')
-    parser.add_argument('--first_stage_noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
+    parser.add_argument('--first_stage_noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--first_stage_data_name', type=str, default='cifar10', help='Dataset to use in the first stage of model training')
     parser.add_argument('--first_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     
@@ -112,7 +113,23 @@ def data_config(data_name, parallel):
         
         os.chdir("/home/martim/Documents/work_insight/study_forgetting_v2")
         print("Cifar10 data loaded.")
-                    
+    elif data_name == "cifar100":
+        print("Loading cifar100 data.")
+        
+        mean = [0.5071, 0.4867, 0.4408]
+        std = [0.2675, 0.2565, 0.2761]
+        
+        transform_train, transform_test = data_augmentation_transforms(mean,std)
+        
+        os.chdir("./datasets/cifar100")
+        trainset, testset, clean_labels, noisy_labels, noisy_indexes, all_labels = get_cifar100_parallel_datasets(args, subset, transform_train, transform_test, noise_ratio,parallel)
+
+        train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
+        test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, num_workers=0, pin_memory=True)
+        
+        os.chdir("/home/martim/Documents/work_insight/study_forgetting_v2")
+   
+                        
     else:
         print("Dataset not recognized. Only the cifar10 dataset is available at the moment.")
         return -1

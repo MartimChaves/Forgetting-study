@@ -30,8 +30,6 @@ def get_dataset(args,root,noise_type,subset,noise_ratio,transform_train, transfo
     
     return cifar_train, testset, cifar_train.clean_labels, cifar_train.noisy_indexes
 
-#class Cifar100Test(tv.datasets.CIFAR100):
-
 def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05,th=0.20):
 
     if not args.subset:
@@ -95,15 +93,29 @@ def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05,
     return cifar_train, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs, testset
 
 
-def get_parallel_datasets():
+def get_parallel_datasets(args, subset, transform_train, transform_test, noise_ratio,parallel):
     
-    return
+    cifar_train = Cifar100(args,args.train_root,subset,args.first_stage_noise_ration,train=True,transform=transform_train,parallel=parallel)
+    
+    if args.first_stage_noise_type == "random_in_noise":
+        cifar_train.random_in_noise()
+        for idx,i in enumerate(cifar_train.labels):
+            cifar_train.soft_labels[idx,i] = 1
+    else:
+        print(args.noise_type + " not added yet. No changes made.")
+    
+    cifar_train.labels = np.asarray(cifar_train.labels, dtype=np.long)
+    cifar_train.labelsNoisyOriginal = cifar_train.labels.copy()
+        
+    testset = Cifar100(args,args.train_root,subset,args.first_stage_noise_ration,train=False,transform=transform_train)
+    
+    return cifar_train, testset, cifar_train.clean_labels, cifar_train.noisy_labels, cifar_train.noisy_indexes,  cifar_train.labelsNoisyOriginal
 
 
 
 class Cifar100(tv.datasets.CIFAR100):
         
-    def __init__(self, args, path, subset, noise_ratio,train=True,transform=None,ssl=False):
+    def __init__(self, args, path, subset, noise_ratio,train=True,transform=None,parallel='',ssl=False):
         
         self.args = args
         
@@ -119,6 +131,7 @@ class Cifar100(tv.datasets.CIFAR100):
             self.data = pickle.load(cifar100, encoding='bytes')
         self.transform = transform
         
+        
         if subset:
             subdataset, sublabelset = self.get_subset(subset)
             self.labels = sublabelset
@@ -131,10 +144,17 @@ class Cifar100(tv.datasets.CIFAR100):
             self.num_classes = 100 
             self.clean_labels = self.labels.copy()
             
+        if parallel:
+            indx1 = int(parallel[0]*0.5*len(self.train))
+            indx2 = int(indx1 + 0.5*len(self.train))
+            self.train = self.train[indx1:indx2]
+            self.labels = self.labels[indx1:indx2]
+        
         self.noise_ratio = noise_ratio
         self._num = int(len(self.labels) * self.noise_ratio)
         self.noisy_indexes = []
         self.clean_indexes = []
+        self.noisy_labels = []
         
         self.soft_labels = np.zeros((len(self.labels), self.num_classes), dtype=np.float32)
         self.neighbour_labels = np.zeros(self.soft_labels.shape)
@@ -187,6 +207,8 @@ class Cifar100(tv.datasets.CIFAR100):
                     label_sym = np.random.randint(self.num_classes, dtype=np.int32)
                 self.labels[idxes[i]] = label_sym
 
+        self.noisy_labels = self.labels.copy()
+        
     def get_subset(self, class_list):
         
         trainset = self.data['data'.encode()]

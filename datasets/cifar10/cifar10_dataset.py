@@ -133,8 +133,11 @@ def get_parallel_datasets(args, transform_train, transform_test, noise_ratio,par
     #parallel = [0] or [1]
     cifar_train = Cifar10Train(args, noise_ratio, num_classes, first_stage, train=True, transform=transform_train, pslab_transform = transform_test,parallel=parallel)
     
-    cifar_train.random_in_noise()
-    
+    if args.first_stage_noise_type == "random_in_noise":
+        cifar_train.random_in_noise()
+    elif args.first_stage_noise_type == "real_in_noise":
+        cifar_train.real_in_noise([])
+        
     cifar_train.labelsNoisyOriginal = cifar_train.labels.copy()
     
     testset = Cifar10Test(root='./data', train=False, transform=transform_test)
