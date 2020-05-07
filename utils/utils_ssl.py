@@ -36,19 +36,19 @@ def track_wrt_original(args,model,train_loader,device):
         all_losses_t = torch.Tensor().to(device)
         all_index = torch.LongTensor().to(device)
         
-        for imgs, img_pslab, labels, soft_labels, index in train_loader:
+        for imgs, _, labels, soft_labels, index in train_loader:
             
-            imgs, index = imgs.to(device), index.to(device)
+            imgs, labels, index = imgs.to(device), labels.to(device), index.to(device)
             
-            clean_targets = torch.from_numpy(train_loader.dataset.clean_labels)[index]
-            target = clean_targets.to(device)
+            # clean_targets = torch.from_numpy(train_loader.dataset.clean_labels)[index]
+            # target = clean_targets.to(device)
             
             prediction_preSoft = model(imgs)
             
             prediction = F.log_softmax(prediction_preSoft, dim=1)
 
             # Losses
-            idx_loss = F.nll_loss(prediction, target, reduction = 'none')
+            idx_loss = F.nll_loss(prediction, labels, reduction = 'none')
             idx_loss.detach_()
 
             all_index = torch.cat((all_index, index))
@@ -58,7 +58,6 @@ def track_wrt_original(args,model,train_loader,device):
         all_losses[all_index.cpu()] = all_losses_t.data.cpu()
     
     return all_losses.data.numpy()
-
         
 
 def mixup_data(x, y, alpha=1.0, device='cuda'):

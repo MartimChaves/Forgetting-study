@@ -180,7 +180,8 @@ def main(args):#, dst_folder):
             trainset_measure, _, _, _, _, _ = get_cifar10_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset,ssl=True)
             train_loader_measure = torch.utils.data.DataLoader(trainset_measure, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
         elif args.dataset == "cifar100":
-            pass               
+            trainset_measure, _, _, _ = get_cifar100_dataset(args,args.train_root,noise_type,args.subset,noise_ratio,transform_train, transform_test,ssl=True)      
+            train_loader_measure = torch.utils.data.DataLoader(trainset_measure, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
                
         loss= track_wrt_original(args,model,train_loader_measure,device)
         if args.use_bmm:

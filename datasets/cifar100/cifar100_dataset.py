@@ -12,10 +12,10 @@ from IPython import embed
 
 import matplotlib.pyplot as plt
 
-def get_dataset(args,root,noise_type,subset,noise_ratio,transform_train, transform_test):
+def get_dataset(args,root,noise_type,subset,noise_ratio,transform_train, transform_test,ssl=False):
     
     #subset = [2,4,6,20,89]
-    cifar_train = Cifar100(args,root,subset,noise_ratio,train=True,transform=transform_train)
+    cifar_train = Cifar100(args,root,subset,noise_ratio,train=True,transform=transform_train,ssl=ssl)
     
     if noise_type == "random_in_noise":
         cifar_train.random_in_noise()
@@ -90,7 +90,7 @@ def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05,
     percent_clean = round(count[1]/(count[0]+count[1]),7)
     nImgs = count[0]+count[1]
     
-    testset = Cifar100(args,root,subset,noise_ratio,train=False,transform=transform_train)
+    testset = Cifar100(args,args.root,args.subset,args.noise_ratio,train=False,transform=transform_train)
     
     return cifar_train, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs, testset
 
