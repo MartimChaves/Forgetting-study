@@ -36,7 +36,7 @@ def parse_args():
     
     parser.add_argument('--first_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
     parser.add_argument('--first_stage_noise_ration', type=float, default=0.4, help='noise ratio for the first stage of training')
-    parser.add_argument('--first_stage_noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
+    parser.add_argument('--first_stage_noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--first_stage_data_name', type=str, default='cifar10', help='Dataset to use in the first stage of model training')
     parser.add_argument('--first_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     parser.add_argument('--model_type', type=str, default='13-CNN', help='Model structure to use, select between: preactResNet18, 13-CNN')

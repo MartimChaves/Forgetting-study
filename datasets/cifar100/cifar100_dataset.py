@@ -39,7 +39,7 @@ def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05,
     else:
         num_classes = len(args.subset)
     
-    cifar_train = Cifar100(args,args.root,args.subset,args.noise_ratio,train=True,transform=transform_train,ssl=True)
+    cifar_train = Cifar100(args,args.train_root,args.subset,args.noise_ratio,train=True,transform=transform_train,ssl=True)
 
     if args.noise_type == "random_in_noise":
         cifar_train.random_in_noise()
@@ -81,7 +81,7 @@ def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05,
         train_clean_indexes = np.array(temp_clean_indexes)
     
     # everything else is noisy
-    all_indxs = np.array(list(range(cifar_train.labels.shape[0])))       
+    all_indxs = np.array(list(range(len(cifar_train.labels))))       
     train_noisy_indexes = np.where(np.isin(all_indxs,train_clean_indexes)==False)[0]
     
     true_clean = np.isin(train_clean_indexes,cifar_train.clean_indexes)
@@ -90,7 +90,7 @@ def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05,
     percent_clean = round(count[1]/(count[0]+count[1]),7)
     nImgs = count[0]+count[1]
     
-    testset = Cifar100(args,args.root,args.subset,args.noise_ratio,train=False,transform=transform_train)
+    testset = Cifar100(args,args.train_root,args.subset,args.noise_ratio,train=False,transform=transform_train)
     
     return cifar_train, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs, testset
 

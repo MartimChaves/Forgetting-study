@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument('--Mixup_Alpha', type=float, default=1, help='alpha value for the beta dist from mixup')
     parser.add_argument('--cuda_dev', type=int, default=0, help='set to 1 to choose the second gpu')
     parser.add_argument('--save_checkpoint', type=str, default= "False", help='save checkpoints for ensembles')
-    parser.add_argument('--dataset', type=str, default='cifar100', help='Daraset name')
+    parser.add_argument('--dataset', type=str, default='cifar10', help='Daraset name')
     parser.add_argument('--swa', type=str, default='True', help='Apply SWA')
     parser.add_argument('--swa_start', type=int, default=350, help='Start SWA')
     parser.add_argument('--swa_freq', type=float, default=5, help='Frequency')
@@ -67,7 +67,7 @@ def parse_args():
 
     parser.add_argument('--subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     parser.add_argument('--noise_ratio', type=float, default=0.4, help='noise ratio for the first stage of training')
-    parser.add_argument('--noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
+    parser.add_argument('--noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--threshold', type=float, default=0.20, help='Percentage of samples to consider clean')
     parser.add_argument('--bmm_th', type=float, default=0.05, help='Probability threshold to consider samples when using bmm')
     parser.add_argument('--threshold_2nd', type=float, default=0.20, help='Percentage of samples to consider clean - when in 2nd stage')
@@ -112,10 +112,10 @@ def data_config(args, transform_train, transform_test,device):
             metrics[idx] = B_sorted
     
     if args.dataset == "cifar10":
-        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold )
+        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold)
         testset = datasets.CIFAR10(root='./datasets/cifar10/data', train=False, download=False, transform=transform_test)
     elif args.dataset == "cifar100":
-        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs, testset = get_ssl_cifar100_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold )
+        trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs, testset = get_ssl_cifar100_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold)
         
     #train_clean_indexes = trainset.clean_indexes
     batch_sampler = TwoStreamBatchSampler(train_noisy_indexes, train_clean_indexes, args.batch_size, args.labeled_batch_size) 
@@ -195,9 +195,9 @@ def main(args):#, dst_folder):
             
         # create save info function
         if args.dataset == "cifar10":
-            trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd )
+            trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd)
         elif args.dataset == "cifar100":
-            trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar100_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd )
+            trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs, _ = get_ssl_cifar100_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd)
         
         # re-train
         model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader)
