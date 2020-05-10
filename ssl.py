@@ -79,6 +79,7 @@ def parse_args():
     parser.add_argument('--parallel', dest='parallel', default=False, action='store_true', help='if true, use parallel results')
     parser.add_argument('--use_bmm', dest='use_bmm', default=False, action='store_true', help='if true, create sets based on a bmm model')
     parser.add_argument('--double_run', dest='double_run', default=False, action='store_true', help='if true, run experiment twice')
+    parser.add_argument('--plot_loss', dest='plot_loss', default=False, action='store_true', help='Plot loss graphs (debugging)')
     
     args = parser.parse_args()
     return args
@@ -160,30 +161,41 @@ def main(args):#, dst_folder):
         transforms.Normalize(mean, std),
     ])
 
-    # data loader
+    # Data loader
     train_loader, test_loader, train_noisy_indexes, percent_clean, nImgs = data_config(args, transform_train, transform_test,device)#,  dst_folder)
     
-    model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader)
+    # Data loader for tracking (noisy indexes known)
+    if args.dataset == "cifar10":
+        first_stage = True
+        subset = []
+        trainset_measure, _, _, _, noisy_labels_idx, _ = get_cifar10_dataset(args, transform_train, transform_test, args.num_classes, args.noise_ratio, args.noise_type, first_stage, subset,ssl=True)
+        train_loader_measure = torch.utils.data.DataLoader(trainset_measure, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
+    elif args.dataset == "cifar100":
+        trainset_measure, _, _, noisy_labels_idx = get_cifar100_dataset(args,args.train_root,args.noise_type,args.subset,args.noise_ratio,transform_train, transform_test,ssl=True)      
+        train_loader_measure = torch.utils.data.DataLoader(trainset_measure, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
+
+    
+    # Train model
+    model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch, loss_per_epoch_train = train_stage(args,train_loader,device,train_noisy_indexes,test_loader,train_loader_measure)
     
     save_info = save_info_update(args,save_info,percent_clean,nImgs,top1_train_ac)
-    # noisy clean graph here
+    
+    if args.plot_loss:
+        # noisy clean graph 
+        loss_tr = np.asarray(loss_per_epoch_train)
+        loss_tr_t = np.transpose(loss_tr)
+        noisy_labels = np.zeros(shape = loss_tr_t.shape[0])
+        noisy_labels[noisy_labels_idx] = 1
+        
+        exp_name = [args.dataset + "_ssl",args.noise_type,args.subset,"_","_","_"]
+        clean_measures, noisy_measures, _ = process_measures(loss_tr_t,noisy_labels)
+        graph_measures(exp_name,'Epoch','Loss',clean_measures,noisy_measures,noisy_labels,args.experiment_name + '_1st_ssl')
+        
     
     if args.double_run:
         # re-calculate measure according to original labels
-        num_classes = args.num_classes #10
-        noise_ratio = args.noise_ratio#0.40
-        noise_type = args.noise_type #"random_in_noise"
-        
-        if args.dataset == "cifar10":
-            first_stage = True
-            subset = []
-            trainset_measure, _, _, _, _, _ = get_cifar10_dataset(args, transform_train, transform_test, num_classes, noise_ratio, noise_type, first_stage, subset,ssl=True)
-            train_loader_measure = torch.utils.data.DataLoader(trainset_measure, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
-        elif args.dataset == "cifar100":
-            trainset_measure, _, _, _ = get_cifar100_dataset(args,args.train_root,noise_type,args.subset,noise_ratio,transform_train, transform_test,ssl=True)      
-            train_loader_measure = torch.utils.data.DataLoader(trainset_measure, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
                
-        loss= track_wrt_original(args,model,train_loader_measure,device)
+        loss = track_wrt_original(args,model,train_loader_measure,device)
         if args.use_bmm:
             # re-fit bmm and calculate probs
             all_index = np.array(range(len(loss)))
@@ -200,9 +212,21 @@ def main(args):#, dst_folder):
             trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs, _ = get_ssl_cifar100_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd)
         
         # re-train
-        model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader)
+        model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader,train_loader_measure)
 
+        if args.plot_loss:
+            # noisy clean graph 
+            loss_tr = np.asarray(loss_per_epoch_train)
+            loss_tr_t = np.transpose(loss_tr)
+            noisy_labels = np.zeros(shape = loss_tr_t.shape[0])
+            noisy_labels[noisy_labels_idx] = 1
+            
+            exp_name = [args.dataset + "_ssl",args.noise_type,args.subset,"_","_","_"]
+            clean_measures, noisy_measures, _ = process_measures(loss_tr_t,noisy_labels)
+            graph_measures(exp_name,'Epoch','Loss',clean_measures,noisy_measures,noisy_labels,args.experiment_name + '_2nd_ssl')
+                
         save_info = save_info_update(args,save_info,percent_clean,nImgs,top1_train_ac)
+        
     # # write to a text file accuracy values
     # save_info = "th_"
     # # % of chosen images
@@ -225,8 +249,6 @@ def main(args):#, dst_folder):
     
     # save_info = save_info + "accRes_" + str(round(top1_train_ac,5)) 
     
-    
-    
     path_file = open("accuracy_measures/acc_results.txt","a") 
     path_file.write(save_info + "\n")
     path_file.close()
@@ -245,7 +267,7 @@ def main(args):#, dst_folder):
     plt.savefig(args.experiment_name + '.png', dpi = 150)
     plt.close()        
 
-def train_stage(args,train_loader,device,train_noisy_indexes,test_loader):
+def train_stage(args,train_loader,device,train_noisy_indexes,test_loader,train_loader_measure):
     
     model = MT_Net(num_classes = args.num_classes, dropRatio = args.dropout).to(device)
 
@@ -254,6 +276,7 @@ def train_stage(args,train_loader,device,train_noisy_indexes,test_loader):
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.M, gamma=0.1)
 
     loss_train_epoch = []
+    loss_per_epoch_train = []
     loss_val_epoch = []
     acc_train_per_epoch = []
     acc_val_per_epoch = []
@@ -272,13 +295,17 @@ def train_stage(args,train_loader,device,train_noisy_indexes,test_loader):
 
         loss_train_epoch += [loss_per_epoch]
 
+        if args.plot_loss:
+            loss = track_wrt_original(args,model,train_loader_measure,device)
+            loss_per_epoch_train.append(loss)
+        
         loss_per_epoch, acc_val_per_epoch_i = testing(args, model, device, test_loader)
 
         loss_val_epoch += loss_per_epoch
         acc_train_per_epoch += [top1_train_ac]
         acc_val_per_epoch += acc_val_per_epoch_i
         
-    return model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch
+    return model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch, loss_per_epoch_train
 
 def save_info_update(args,save_info,percent_clean,nImgs,top1_train_ac):
     
@@ -304,7 +331,6 @@ def save_info_update(args,save_info,percent_clean,nImgs,top1_train_ac):
         save_info = save_info + "parallel" + "_"
     
     save_info = save_info + "accRes_" + str(round(top1_train_ac,5)) 
-    
     
     return save_info
 
