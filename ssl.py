@@ -26,12 +26,14 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
     parser.add_argument('--batch_size', type=int, default=100, help='#images in each mini-batch')
     parser.add_argument('--test_batch_size', type=int, default=100, help='#images in each mini-batch')
-    parser.add_argument('--epoch', type=int, default=1, help='training epoches')
+    parser.add_argument('--epoch', type=int, default=2, help='training epoches')
     parser.add_argument('--wd', type=float, default=1e-4, help='weight decay')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--dataset_type', default='semiSup', help='noise type of the dataset')
+    
     parser.add_argument('--train_root', default='./datasets/cifar10/data', help='root for train data')
-    parser.add_argument('--epoch_begin', default=2, type=int, help='the epoch to begin update labels')
+    
+    parser.add_argument('--epoch_begin', default=1, type=int, help='the epoch to begin update labels')
     parser.add_argument('--epoch_update', default=1, type=int, help='#epoch to average to update soft labels')
     parser.add_argument('--labeled_samples', type=int, default=10000, help='number of labeled samples')
     parser.add_argument('--out', type=str, default='./data/model_data', help='Directory of the output')
@@ -46,14 +48,18 @@ def parse_args():
     parser.add_argument('--label_noise', type=float, default = 0.0,help='ratio of labeles to relabel randomly')
     parser.add_argument('--loss_term', type=str, default='MixUp_ep', help='the loss to use: "Reg_ep" for CE, or "MixUp_ep" for M')
     parser.add_argument('--relab', type=str, default='unifRelab', help='choose how to relabel the random samples from the unlabeled set')
+    
     parser.add_argument('--num_classes', type=int, default=10, help='beta parameter for the EMA in the soft labels')
+    
     parser.add_argument('--gausTF', type=bool, default=False, help='apply gaussian noise')
     parser.add_argument('--dropout', type=float, default=0.1, help='cnn dropout')
     parser.add_argument('--initial_epoch', type=int, default=0, help='#images in each mini-batch')
     parser.add_argument('--Mixup_Alpha', type=float, default=1, help='alpha value for the beta dist from mixup')
     parser.add_argument('--cuda_dev', type=int, default=0, help='set to 1 to choose the second gpu')
     parser.add_argument('--save_checkpoint', type=str, default= "False", help='save checkpoints for ensembles')
+    
     parser.add_argument('--dataset', type=str, default='cifar10', help='Daraset name')
+    
     parser.add_argument('--swa', type=str, default='True', help='Apply SWA')
     parser.add_argument('--swa_start', type=int, default=350, help='Start SWA')
     parser.add_argument('--swa_freq', type=float, default=5, help='Frequency')
@@ -212,7 +218,7 @@ def main(args):#, dst_folder):
             trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs, _ = get_ssl_cifar100_dataset(args, transform_train, transform_test, metrics, bmm_th=args.bmm_th_2nd,th = args.threshold_2nd)
         
         # re-train
-        model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch = train_stage(args,train_loader,device,train_noisy_indexes,test_loader,train_loader_measure)
+        model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch, loss_per_epoch_train = train_stage(args,train_loader,device,train_noisy_indexes,test_loader,train_loader_measure)
 
         if args.plot_loss:
             # noisy clean graph 

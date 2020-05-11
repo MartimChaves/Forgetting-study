@@ -1,0 +1,2 @@
+python3 main.py --lr_2nd 0.001 --epoch_1st 152 --epoch_2nd 10 --M 40 --M 80 --save_best_AUC_model --track_CE --step_number 1500 --experiment_name cifar100_forget_4_ssl --first_stage_num_classes 100 --first_stage_noise_type "random_in_noise" --second_stage_num_classes 10 --second_stage_data_name "cifar10" --first_stage_data_name "cifar100"
+python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --experiment_name ssl_cifar100Forget --train_root "./datasets/cifar100/data" --num_classes 100 --dataset "cifar100" --use_bmm --double_run --noise_type "random_in_noise"

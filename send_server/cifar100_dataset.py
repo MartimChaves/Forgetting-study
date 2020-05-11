@@ -87,8 +87,7 @@ def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05,
     
     percent_clean = round(count[1]/(count[0]+count[1]),7)
     nImgs = count[0]+count[1]
-
-    cifar_train.labels = np.asarray(cifar_train.labels, dtype=np.long)
+    
     testset = Cifar100(args,args.train_root,args.subset,args.noise_ratio,train=False,transform=transform_train)
     
     return cifar_train, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs, testset
