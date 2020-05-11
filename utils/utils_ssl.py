@@ -119,7 +119,10 @@ def train_CrossEntropy_partialRelab(args, model, device, train_loader, optimizer
     counter = 1
 
     for imgs, img_pslab, labels, soft_labels, index in train_loader:
-              
+        
+        if len(imgs) != 100:
+            print("Length of images batch different than 100.")
+        
         images = imgs.to(device)
         labels = labels.to(device)
         soft_labels = soft_labels.to(device)

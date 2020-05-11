@@ -226,7 +226,7 @@ def main(args):
         acc_train_per_epoch += [top1_train_ac]
         acc_val_per_epoch += acc_val_per_epoch_i
         
-    torch.save(model.state_dict(), model_1st_path)
+    #torch.save(model.state_dict(), model_1st_path)
     
     # update noisy_labels
     
@@ -310,12 +310,7 @@ def main(args):
         plt.close()
     
 def calc_sim_indxs(arr1,arr2,noisy_indexes,noisy=True):
-    # arr1 = arr1[arr1.argsort()]
-    # idx = np.searchsorted(arr1,arr2)
-    # idx[idx==len(arr1)] = 0
-    # mask = arr1[idx]==arr2
-    # out = np.bincount(idx[mask])
-    
+
     overlap = np.isin(arr1,arr2)
     val, amount_overlap = np.unique(overlap,return_counts=True)
     percent_overlap = round(amount_overlap[1]/np.sum(amount_overlap)*100,2)
@@ -327,7 +322,7 @@ def calc_sim_indxs(arr1,arr2,noisy_indexes,noisy=True):
     else:
         best_case = round(amount_overlap_noisy[0]/np.sum(amount_overlap_noisy)*100,2)
         
-    return percent_overlap, best_case #round((np.count_nonzero(out)/len(out))*100,2) 
+    return percent_overlap, best_case 
     
 if __name__ == "__main__":
     

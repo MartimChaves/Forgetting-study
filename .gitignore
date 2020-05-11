@@ -10,3 +10,4 @@ datasets/svhn/data/test_32x32.mat
 datasets/cifar100/data/train
 datasets/cifar100/data/test
 datasets/svhn/data/train_32x32.mat
+send_server/*
