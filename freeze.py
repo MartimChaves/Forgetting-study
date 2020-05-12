@@ -49,12 +49,12 @@ def parse_args():
     parser.add_argument('--second_stage_noise_ration', type=float, default=0.0, help='noise ratio for the first stage of training')
     parser.add_argument('--second_stage_noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--second_stage_data_name', type=str, default='cifar100', help='Dataset to use in the first stage of model training')
-    parser.add_argument('--second_stage_subset', nargs='+', type=int, default=[2,14,23,35,48,51,69,74,87,90], help='Classes of dataset to use as subset')
+    parser.add_argument('--second_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     
     parser.add_argument('--unfreeze_secondStage', type=int, default=10, help='Step/epoch at which models inner layers are set to not frozen')
     parser.add_argument('--freeze_epochWise', dest='freeze_epochWise', default=False, action='store_true', help='if true, inner layers are frozen for the duration of epochs')
     parser.add_argument('--freeze_earlySecondStage', dest='freeze_earlySecondStage', default=False, action='store_true', help='if true, for the first steps in second stage, inner layers of model are frozen')
-    parser.add_argument('--freeze_layers', nargs='+', type=str, default=["layer1","layer2"], help='Layers to freeze')
+    parser.add_argument('--freeze_layers', nargs='+', type=str, default=[], help='Layers to freeze')
     
     parser.add_argument('--save_best_AUC_model', dest='save_best_AUC_model', default=True, action='store_true', help='if true, measure AUC after tracking and save model for best AUC')
     parser.add_argument('--track_CE', dest='track_CE', default=True, action='store_true', help='if true, track CE')
@@ -283,10 +283,7 @@ def main(args):
             loss_per_epoch_train.append(epoch_losses_train)
             
             counter += 1
-            
-            if counter > 3:
-                break
-            
+                       
         scheduler.step()
     
     # plot and save graphs
