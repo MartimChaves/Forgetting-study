@@ -22,7 +22,7 @@ def plt_hist(data,data2,min,max,bin_no,xlabel="Probability",ylabel="Number of sa
 torch.cuda.set_device(0)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-relabel_arr_name = "relabel_" + str(0.4) + "_" + "random_in_noise" + "_" + "cifar10"
+relabel_arr_name = "relabel_" + str(0.4) + "_" + "real_in_noise" + "_" + "cifar10"
 relabel_arr = np.load("accuracy_measures/" + relabel_arr_name + ".npy")
 
 # plt_hist(relabel_arr,0.1,19.5,100,xlabel="Loss",ylabel="Number of samples",title="Loss values histogram - Relabel data",log=False) #0.1 19.5

@@ -64,7 +64,9 @@ def parse_args():
     parser.add_argument('--swa_start', type=int, default=350, help='Start SWA')
     parser.add_argument('--swa_freq', type=float, default=5, help='Frequency')
     parser.add_argument('--swa_lr', type=float, default=-0.01, help='LR')
-    parser.add_argument('--labeled_batch_size', default=16, type=int, metavar='N', help="labeled examples per minibatch (default: no constrain)")
+    
+    parser.add_argument('--labeled_batch_size', default=0, type=int, metavar='N', help="labeled examples per minibatch (default: no constrain)")
+    
     parser.add_argument('--validation_exp', type=str, default='False', help='Ignore the testing set during training and evaluation (it gets 5k samples from the training data to do the validation step)')
     parser.add_argument('--drop_extra_forward', type=str, default='True', help='Do an extra forward pass to compute the labels without dropout.')
     parser.add_argument('--val_samples', type=int, default=5000, help='Number of samples to be kept for validation (from the training set))')
@@ -81,11 +83,11 @@ def parse_args():
     parser.add_argument('--agree_on_clean', dest='agree_on_clean', default=False, action='store_true', help='if true, indexes of clean samples must be present in all metric vectors')
     parser.add_argument('--balanced_set', dest='balanced_set', default=False, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
     parser.add_argument('--forget', dest='forget', default=False, action='store_true', help='if true, use forget results')
-    parser.add_argument('--relabel', dest='relabel', default=True, action='store_true', help='if true, use relabel results')
+    parser.add_argument('--relabel', dest='relabel', default=False, action='store_true', help='if true, use relabel results')
     parser.add_argument('--parallel', dest='parallel', default=False, action='store_true', help='if true, use parallel results')
     parser.add_argument('--use_bmm', dest='use_bmm', default=False, action='store_true', help='if true, create sets based on a bmm model')
     parser.add_argument('--double_run', dest='double_run', default=False, action='store_true', help='if true, run experiment twice')
-    parser.add_argument('--plot_loss', dest='plot_loss', default=False, action='store_true', help='Plot loss graphs (debugging)')
+    parser.add_argument('--plot_loss', dest='plot_loss', default=True, action='store_true', help='Plot loss graphs (debugging)')
     
     args = parser.parse_args()
     return args
@@ -118,6 +120,12 @@ def data_config(args, transform_train, transform_test,device):
             B_sorted = bmm_probs(metric,all_index,device,indx_np=True)
             metrics[idx] = B_sorted
     
+    # bins = np.linspace(0, 1, 100)
+    # plt.hist(B_sorted, bins, alpha=0.5, label='bmm')
+    # plt.legend(loc='upper right')
+    # #plt.yscale('log')
+    # plt.show()
+    
     if args.dataset == "cifar10":
         trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs = get_ssl_cifar10_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold)
         testset = datasets.CIFAR10(root='./datasets/cifar10/data', train=False, download=False, transform=transform_test)
@@ -125,9 +133,11 @@ def data_config(args, transform_train, transform_test,device):
         trainset, train_noisy_indexes, train_clean_indexes, percent_clean, nImgs, testset = get_ssl_cifar100_dataset(args, transform_train, transform_test, metrics,bmm_th=args.bmm_th,th=args.threshold)
         
     #train_clean_indexes = trainset.clean_indexes
-    batch_sampler = TwoStreamBatchSampler(train_noisy_indexes, train_clean_indexes, args.batch_size, args.labeled_batch_size) 
-    train_loader = torch.utils.data.DataLoader(trainset, batch_sampler=batch_sampler, num_workers=0, pin_memory=True)
-
+    if args.labeled_batch_size > 0:
+        batch_sampler = TwoStreamBatchSampler(train_noisy_indexes, train_clean_indexes, args.batch_size, args.labeled_batch_size) 
+        train_loader = torch.utils.data.DataLoader(trainset, batch_sampler=batch_sampler, num_workers=0, pin_memory=True)
+    else:
+        train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=False, num_workers=0, pin_memory=True)
     
     test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
@@ -287,6 +297,7 @@ def train_stage(args,train_loader,device,train_noisy_indexes,test_loader,train_l
     acc_train_per_epoch = []
     acc_val_per_epoch = []
 
+    train_counter = 1
     for epoch in range(1, args.epoch + 1):
         st = time.time()
         scheduler.step()
@@ -302,14 +313,17 @@ def train_stage(args,train_loader,device,train_noisy_indexes,test_loader,train_l
         loss_train_epoch += [loss_per_epoch]
 
         if args.plot_loss:
-            loss = track_wrt_original(args,model,train_loader_measure,device)
-            loss_per_epoch_train.append(loss)
+            if train_counter % 15 == 0:
+                loss = track_wrt_original(args,model,train_loader_measure,device)
+                loss_per_epoch_train.append(loss)
         
         loss_per_epoch, acc_val_per_epoch_i = testing(args, model, device, test_loader)
 
         loss_val_epoch += loss_per_epoch
         acc_train_per_epoch += [top1_train_ac]
         acc_val_per_epoch += acc_val_per_epoch_i
+        
+        train_counter += 1
         
     return model, top1_train_ac, acc_train_per_epoch, acc_val_per_epoch, loss_train_epoch, loss_per_epoch_train
 
