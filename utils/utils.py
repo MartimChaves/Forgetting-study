@@ -330,7 +330,7 @@ def train_CrossEntropy(args, model, device, train_loader, optimizer, epoch, \
                 
                 # measure auc; if highest -> save model
                 if args.save_best_AUC_model:
-                    fpr, tpr, _ = roc_curve(noisy_labels, second_stage_CE_track[-1])                        
+                    fpr, tpr, _ = roc_curve(noisy_labels, epoch_losses_train)#second_stage_CE_track[-1])                        
                     current_auc = auc(fpr, tpr)
                     
                     if current_auc > best_auc and epoch_losses_train.mean(axis=0) > 0.2:

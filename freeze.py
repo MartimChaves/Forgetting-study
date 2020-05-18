@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument('--cuda_dev', type=int, default=0, help='GPU to select')
     
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate 1st stage')
-    parser.add_argument('--lr_2nd', type=float, default=0.001, help='learning rate 2nd stage')
+    parser.add_argument('--lr_2nd', type=float, default=0.1, help='learning rate 2nd stage')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--gamma_scheduler', default=0.1, type=float, help='Value to decay the learning rate')
     parser.add_argument('--M_2nd', action='append', type=int, default=[], help="Milestones for the LR sheduler for the second stage of training")
@@ -36,12 +36,12 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=100, help='#images in each mini-batch')
     parser.add_argument('--test_batch_size', type=int, default=100, help='#images in each mini-batch')
     
-    parser.add_argument('--epoch_1st', type=int, default=1, help='training epoches for the 1st stage')
+    parser.add_argument('--epoch_1st', type=int, default=200, help='training epoches for the 1st stage')
     parser.add_argument('--epoch', type=int, default=1, help='training epoches for the 2nd stage')
     
     parser.add_argument('--first_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
     parser.add_argument('--first_stage_noise_ration', type=float, default=0.4, help='noise ratio for the first stage of training')
-    parser.add_argument('--first_stage_noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
+    parser.add_argument('--first_stage_noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--first_stage_data_name', type=str, default='cifar10', help='Dataset to use in the first stage of model training')
     parser.add_argument('--first_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     
@@ -49,12 +49,12 @@ def parse_args():
     parser.add_argument('--second_stage_noise_ration', type=float, default=0.0, help='noise ratio for the first stage of training')
     parser.add_argument('--second_stage_noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--second_stage_data_name', type=str, default='cifar100', help='Dataset to use in the first stage of model training')
-    parser.add_argument('--second_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
+    parser.add_argument('--second_stage_subset', nargs='+', type=int, default=[2,14,23,35,48,51,69,74,87,90], help='Classes of dataset to use as subset')
     
     parser.add_argument('--unfreeze_secondStage', type=int, default=10, help='Step/epoch at which models inner layers are set to not frozen')
     parser.add_argument('--freeze_epochWise', dest='freeze_epochWise', default=False, action='store_true', help='if true, inner layers are frozen for the duration of epochs')
     parser.add_argument('--freeze_earlySecondStage', dest='freeze_earlySecondStage', default=False, action='store_true', help='if true, for the first steps in second stage, inner layers of model are frozen')
-    parser.add_argument('--freeze_layers', nargs='+', type=str, default=[], help='Layers to freeze')
+    parser.add_argument('--freeze_layers', nargs='+', type=str, default=["layer3","layer4","conv1","bn1"], help='Layers to freeze')
     
     parser.add_argument('--save_best_AUC_model', dest='save_best_AUC_model', default=True, action='store_true', help='if true, measure AUC after tracking and save model for best AUC')
     parser.add_argument('--track_CE', dest='track_CE', default=True, action='store_true', help='if true, track CE')
@@ -67,7 +67,7 @@ def parse_args():
     
     parser.add_argument('--train_root', default='./data', help='root for train data')
     
-    parser.add_argument('--experiment_name', type=str, default = 'test_CE',help='name of the experiment (for the output files)')
+    parser.add_argument('--experiment_name', type=str, default = 'freeze',help='name of the experiment (for the output files)')
     
     parser.add_argument('--NN_k', type=int, default=100, help='Number of neighbours to consider in the LOF computation')
     
@@ -191,8 +191,9 @@ def freeze_model_layers(args,model):
                 layer[k].conv2.weight.requires_grad = False
                 #layer[k].conv2.bias.requires_grad = False
         else:
+            if "bn" in  layer_name:
+                layer.bias.requires_grad = False
             layer.weight.requires_grad = False
-            layer.bias.requires_grad = False
 
 def main(args):
     
@@ -300,6 +301,9 @@ def main(args):
     
     experiment_info = [args.first_stage_data_name,args.first_stage_noise_type,"_",args.second_stage_data_name,"_","_"] 
     save_file_name = '_'.join(experiment_info)
+    
+    for layer in args.freeze_layers:
+        args.experiment_name += "_" + layer
     
     # Loss, CE and H
     measure_info = {

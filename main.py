@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=100, help='#images in each mini-batch')
     parser.add_argument('--test_batch_size', type=int, default=100, help='#images in each mini-batch')
     
-    parser.add_argument('--epoch_1st', type=int, default=1, help='training epoches for the 1st stage')
+    parser.add_argument('--epoch_1st', type=int, default=200, help='training epoches for the 1st stage')
     parser.add_argument('--epoch_2nd', type=int, default=1, help='training epoches for the 2nd stage')
     
     parser.add_argument('--first_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
@@ -42,7 +42,7 @@ def parse_args():
     parser.add_argument('--second_stage_num_classes', type=int, default=10, help='number of classes for the first stage of training')
     parser.add_argument('--second_stage_noise_ration', type=float, default=0.0, help='noise ratio for the first stage of training')
     parser.add_argument('--second_stage_noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
-    parser.add_argument('--second_stage_data_name', type=str, default='cifar100', help='Dataset to use in the first stage of model training')
+    parser.add_argument('--second_stage_data_name', type=str, default='svhn', help='Dataset to use in the first stage of model training')
     parser.add_argument('--second_stage_subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     
     parser.add_argument('--unfreeze_secondStage', type=int, default=11, help='Step/epoch at which models inner layers are set to not frozen')
@@ -50,8 +50,8 @@ def parse_args():
     parser.add_argument('--freeze_earlySecondStage', dest='freeze_earlySecondStage', default=False, action='store_true', help='if true, for the first steps in second stage, inner layers of model are frozen')
     parser.add_argument('--batch_eval_preUnfreeze_only', dest='batch_eval_preUnfreeze_only', default=False, action='store_true', help='if true, batch norm will not be set to eval in second stage')
     
-    parser.add_argument('--save_best_AUC_model', dest='save_best_AUC_model', default=False, action='store_true', help='if true, measure AUC after tracking and save model for best AUC')
-    parser.add_argument('--track_CE', dest='track_CE', default=False, action='store_true', help='if true, track CE')
+    parser.add_argument('--save_best_AUC_model', dest='save_best_AUC_model', default=True, action='store_true', help='if true, measure AUC after tracking and save model for best AUC')
+    parser.add_argument('--track_CE', dest='track_CE', default=True, action='store_true', help='if true, track CE')
     #parser.add_argument('--save_BMM_probs', dest='save_BMM_probs', default=True, action='store_true', help='if true, save bmm probs')
     
     parser.add_argument('--second_stg_max_median_loss', type=int, default=1500, help='First stage data loss when retraining maximum median loss - after that point, training is alted')
@@ -325,9 +325,6 @@ def main(args):
         
         scheduler.step()
     
-    # calculate bmm here
-    
-    
     loss_tr = np.asarray(loss_per_epoch_train)
     loss_tr_t = np.transpose(loss_tr)
     
@@ -394,8 +391,12 @@ def main(args):
     np.save("results/" + save_file_name + "_noisy_indx.npy",np.array(noisy_labels))
 
     if args.track_CE:
-        ce_and_labels = np.array(second_stage_CE_track[-1])
+        ce_and_labels = np.array([second_stage_CE_track[-1],highest_auc_loss[-1]])
         array_name = "forget_" + str(args.first_stage_noise_ration) + "_" + str(args.first_stage_noise_type) + "_" + str(args.first_stage_data_name)
+        
+        if args.second_stage_data_name == "svhn":
+            array_name += "_svhn"
+            
         np.save("accuracy_measures/" + array_name + ".npy",ce_and_labels)
     
     # plot histogram

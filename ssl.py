@@ -75,7 +75,7 @@ def parse_args():
 
     parser.add_argument('--subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     parser.add_argument('--noise_ratio', type=float, default=0.4, help='noise ratio for the first stage of training')
-    parser.add_argument('--noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
+    parser.add_argument('--noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--threshold', type=float, default=0.20, help='Percentage of samples to consider clean')
     parser.add_argument('--bmm_th', type=float, default=0.05, help='Probability threshold to consider samples when using bmm')
     parser.add_argument('--threshold_2nd', type=float, default=0.20, help='Percentage of samples to consider clean - when in 2nd stage')
@@ -83,11 +83,12 @@ def parse_args():
     parser.add_argument('--agree_on_clean', dest='agree_on_clean', default=False, action='store_true', help='if true, indexes of clean samples must be present in all metric vectors')
     parser.add_argument('--balanced_set', dest='balanced_set', default=False, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
     parser.add_argument('--forget', dest='forget', default=False, action='store_true', help='if true, use forget results')
+    parser.add_argument('--f_l', dest='f_l', default=False, action='store_true', help='if true, use loss forget results (instead of CE')
     parser.add_argument('--relabel', dest='relabel', default=False, action='store_true', help='if true, use relabel results')
     parser.add_argument('--parallel', dest='parallel', default=False, action='store_true', help='if true, use parallel results')
     parser.add_argument('--use_bmm', dest='use_bmm', default=False, action='store_true', help='if true, create sets based on a bmm model')
     parser.add_argument('--double_run', dest='double_run', default=False, action='store_true', help='if true, run experiment twice')
-    parser.add_argument('--plot_loss', dest='plot_loss', default=True, action='store_true', help='Plot loss graphs (debugging)')
+    parser.add_argument('--plot_loss', dest='plot_loss', default=False, action='store_true', help='Plot loss graphs (debugging)')
     
     args = parser.parse_args()
     return args
@@ -97,10 +98,15 @@ def data_config(args, transform_train, transform_test,device):
    
     metrics = []
     if args.forget:
+        
         forget_arr_name = "forget_" + str(args.noise_ratio) + "_" + str(args.noise_type) + "_" + str(args.dataset)
         forget_arr = np.load("accuracy_measures/" + forget_arr_name + ".npy")
-        metrics.append(forget_arr)
-    
+        if args.f_l:
+            metrics.append(forget_arr[1])
+        else:
+            metrics.append(forget_arr[0])
+            
+            
     if args.relabel:
         relabel_arr_name = "relabel_" + str(args.noise_ratio) + "_" + str(args.noise_type) + "_" + str(args.dataset)
         relabel_arr = np.load("accuracy_measures/" + relabel_arr_name + ".npy")
@@ -147,6 +153,15 @@ def main(args):#, dst_folder):
     # best_ac only record the best top1_ac for validation set.
     best_ac = 0.0
     save_info = ""
+    
+    if args.dataset == "cifar10":
+        args.train_root = "./datasets/cifar10/data"
+    elif args.dataset == "cifar100":
+        args.train_root = "./datasets/cifar100/data"    
+    else:
+        print("Unknown dataset.")
+        return 
+    
     # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     if args.cuda_dev == 0 or args.cuda_dev == 1:
         torch.cuda.set_device(args.cuda_dev)
