@@ -1,5 +1,6 @@
 import numpy as np
 import argparse
+import matplotlib.pyplot as plt
 
 def parse_args():
     parser = argparse.ArgumentParser(description='command for the first train')
@@ -31,11 +32,13 @@ def main(args):
     loss_svhn_si = np.argsort(loss_svhn)
     ce_svhn_si = np.argsort(ce_svhn)
     
-    ths = [100, 500, 1000, 2000, 5000, 10000, 20000]
+    ths = [100, 500, 1000, 2000, 5000, 10000, 12000, 15000, 17000, 20000, 25000, 30000]
+    
+    x = np.arange(0,50000,1)
     
     iou_loss = []
     iou_ce = []
-    for th in ths:
+    for th in range(1,50000):
         indxs_loss_iou = iou(loss_cifar100_si,loss_svhn_si,th)
         indxs_ce_iou = iou(ce_cifar100_si,ce_svhn_si,th)
         
@@ -43,9 +46,12 @@ def main(args):
         iou_ce.append(indxs_ce_iou)
     
     # save table
-    print("Thresholds:",ths)
-    print("Loss iou:",iou_loss)
-    print("CE iou:",iou_ce)
+    # print("Thresholds:",ths)
+    # print("Loss iou:",iou_loss)
+    # print("CE iou:",iou_ce)
+    
+    plt.plot(x,iou_loss,'g',x,iou_ce,'b')
+    plt.show()
 
 def iou(arr_1,arr_2,th):
     
@@ -54,7 +60,7 @@ def iou(arr_1,arr_2,th):
     
     overlap_indxs = len(np.where(np.isin(arr_1_indxs,arr_2_indxs)==True)[0])
     
-    iou = overlap_indxs / (2*len(arr_1)-overlap_indxs)
+    iou = overlap_indxs / (2*len(arr_1_indxs)-overlap_indxs)
     
     return round(iou,5)
 
