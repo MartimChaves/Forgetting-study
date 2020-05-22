@@ -171,6 +171,8 @@ def main(args):
     
     #################### Preparing seeds for replicability ########################
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.cuda_dev)
+    if args.cuda_dev == 0 or args.cuda_dev == 1:
+        torch.cuda.set_device(args.cuda_dev)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.backends.cudnn.deterministic = True  # fix the GPU to deterministic mode
     torch.manual_seed(args.seed)  # CPU seed
