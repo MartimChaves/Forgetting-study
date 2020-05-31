@@ -32,15 +32,13 @@ def main(args):
     loss_svhn_si = np.argsort(loss_svhn)
     ce_svhn_si = np.argsort(ce_svhn)
     
-    ths = [100, 500, 1000, 2000, 5000, 10000, 12000, 15000, 17000, 20000, 25000, 30000]
-    
-    x = np.arange(0,50000,1)
+    x = np.arange(0,49999,1)
     
     iou_loss = []
     iou_ce = []
     for th in range(1,50000):
-        indxs_loss_iou = iou(loss_cifar100_si,loss_svhn_si,th)
-        indxs_ce_iou = iou(ce_cifar100_si,ce_svhn_si,th)
+        indxs_loss_iou = iou(loss_cifar100_si,ce_cifar100_si,th)#,loss_svhn_si,th)
+        indxs_ce_iou = iou(ce_svhn_si,loss_svhn_si,th)#,ce_svhn_si,th)
         
         iou_loss.append(indxs_loss_iou)
         iou_ce.append(indxs_ce_iou)
@@ -50,7 +48,7 @@ def main(args):
     # print("Loss iou:",iou_loss)
     # print("CE iou:",iou_ce)
     
-    plt.plot(x,iou_loss,'g',x,iou_ce,'b')
+    plt.plot(x,iou_loss,'k',x,iou_ce,'c')
     plt.show()
 
 def iou(arr_1,arr_2,th):

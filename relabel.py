@@ -265,6 +265,23 @@ def main(args):
     loss = np.array(loss_per_epoch_train_1st[-1])
     np.save("accuracy_measures/" + array_name + ".npy",loss)
     
+    #plot roc curve here
+    fpr, tpr, _ = roc_curve(noisy_labels, loss_per_epoch_train_1st[-1])
+    ce_roc_auc = auc(fpr, tpr)
+    plt.figure()
+    
+    lw = 2
+    plt.plot(fpr, tpr, color='darkorange',lw=lw, label='ROC curve (area = %0.2f)' % ce_roc_auc)
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic example')
+    plt.legend(loc="lower right")
+    plt.savefig(args.experiment_name + '_roc_curve' + '.png', dpi = 150)
+    plt.close()
+    
     if args.compare_to_forgetting:
         auc_name = args.first_stage_data_name + '_' + args.first_stage_noise_type
         forget_auc_arr = np.load("relabel_compare/" + auc_name + ".npy", allow_pickle=True)

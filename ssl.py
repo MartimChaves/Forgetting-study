@@ -26,7 +26,7 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
     parser.add_argument('--batch_size', type=int, default=100, help='#images in each mini-batch')
     parser.add_argument('--test_batch_size', type=int, default=100, help='#images in each mini-batch')
-    parser.add_argument('--epoch', type=int, default=2, help='training epoches')
+    parser.add_argument('--epoch', type=int, default=1, help='training epoches')
     parser.add_argument('--wd', type=float, default=1e-4, help='weight decay')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--dataset_type', default='semiSup', help='noise type of the dataset')
@@ -84,11 +84,11 @@ def parse_args():
     parser.add_argument('--balanced_set', dest='balanced_set', default=False, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
     parser.add_argument('--forget', dest='forget', default=False, action='store_true', help='if true, use forget results')
     parser.add_argument('--f_l', dest='f_l', default=False, action='store_true', help='if true, use loss forget results (instead of CE')
-    parser.add_argument('--relabel', dest='relabel', default=False, action='store_true', help='if true, use relabel results')
+    parser.add_argument('--relabel', dest='relabel', default=True, action='store_true', help='if true, use relabel results')
     parser.add_argument('--parallel', dest='parallel', default=False, action='store_true', help='if true, use parallel results')
     parser.add_argument('--use_bmm', dest='use_bmm', default=False, action='store_true', help='if true, create sets based on a bmm model')
     parser.add_argument('--double_run', dest='double_run', default=False, action='store_true', help='if true, run experiment twice')
-    parser.add_argument('--plot_loss', dest='plot_loss', default=False, action='store_true', help='Plot loss graphs (debugging)')
+    parser.add_argument('--plot_loss', dest='plot_loss', default=True, action='store_true', help='Plot loss graphs (debugging)')
     
     args = parser.parse_args()
     return args
@@ -280,6 +280,24 @@ def main(args):#, dst_folder):
     
     # save_info = save_info + "accRes_" + str(round(top1_train_ac,5)) 
     
+    #plot roc curve here
+    
+    loss = track_wrt_original(args,model,train_loader_measure,device)
+    fpr, tpr, _ = roc_curve(noisy_labels, loss)
+    ce_roc_auc = auc(fpr, tpr)
+    plt.figure()
+    lw = 2
+    plt.plot(fpr, tpr, color='darkorange',lw=lw, label='ROC curve (area = %0.2f)' % ce_roc_auc)
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic example')
+    plt.legend(loc="lower right")
+    plt.savefig(args.experiment_name + '_roc_curve' + '.png', dpi = 150)
+    plt.close()
+    
     path_file = open("accuracy_measures/acc_results.txt","a") 
     path_file.write(save_info + "\n")
     path_file.close()
@@ -328,7 +346,7 @@ def train_stage(args,train_loader,device,train_noisy_indexes,test_loader,train_l
         loss_train_epoch += [loss_per_epoch]
 
         if args.plot_loss:
-            if train_counter % 15 == 0:
+            if train_counter % 15 == 0 or train_counter == args.epoch:
                 loss = track_wrt_original(args,model,train_loader_measure,device)
                 loss_per_epoch_train.append(loss)
         
@@ -345,7 +363,7 @@ def train_stage(args,train_loader,device,train_noisy_indexes,test_loader,train_l
 def save_info_update(args,save_info,percent_clean,nImgs,top1_train_ac):
     
     if not save_info:
-        save_info = "th_"
+        save_info = args.experiment_name + "_th_"
         
     # % of chosen images
     save_info = save_info + str(args.threshold) + "_percentClean_" + str(percent_clean) + "_noImages_" + str(nImgs) + "_"
