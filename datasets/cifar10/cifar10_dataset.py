@@ -115,6 +115,11 @@ def get_ssl_dataset(args, transform_train, transform_test, metrics, bmm_th=0.05,
     else:
         train_clean_indexes = np.array(temp_clean_indexes)
         
+        if args.f_FND:
+            # remove (assumed) false negatives
+            f_n = np.where(args.fnd_fCE>arg.fn_th)[0]
+            train_clean_indexes = train_clean_indexes[np.where(np.isin(train_clean_indexes,f_n)==False)[0]]
+    
     # everything else is noisy
     all_indxs = np.array(list(range(cifar_train.labels.shape[0])))       
     train_noisy_indexes = np.where(np.isin(all_indxs,train_clean_indexes)==False)[0]

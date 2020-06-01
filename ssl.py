@@ -75,7 +75,7 @@ def parse_args():
 
     parser.add_argument('--subset', nargs='+', type=int, default=[], help='Classes of dataset to use as subset')
     parser.add_argument('--noise_ratio', type=float, default=0.4, help='noise ratio for the first stage of training')
-    parser.add_argument('--noise_type', default='random_in_noise', help='noise type of the dataset for the first stage of training')
+    parser.add_argument('--noise_type', default='real_in_noise', help='noise type of the dataset for the first stage of training')
     parser.add_argument('--threshold', type=float, default=0.20, help='Percentage of samples to consider clean')
     parser.add_argument('--bmm_th', type=float, default=0.05, help='Probability threshold to consider samples when using bmm')
     parser.add_argument('--threshold_2nd', type=float, default=0.20, help='Percentage of samples to consider clean - when in 2nd stage')
@@ -84,7 +84,9 @@ def parse_args():
     parser.add_argument('--balanced_set', dest='balanced_set', default=False, action='store_true', help='if true, consider x percentage of clean(labeled) samples from all classes')
     parser.add_argument('--forget', dest='forget', default=False, action='store_true', help='if true, use forget results')
     parser.add_argument('--f_l', dest='f_l', default=False, action='store_true', help='if true, use loss forget results (instead of CE')
-    parser.add_argument('--relabel', dest='relabel', default=True, action='store_true', help='if true, use relabel results')
+    parser.add_argument('--f_FND', dest='f_FND', default=False, action='store_true', help='Use forgetting data as false negative (false clean) detection')
+    parser.add_argument('--fn_th', type=float, default=0.05, help='Probability threshold for false negatives')
+    parser.add_argument('--relabel', dest='relabel', default=False, action='store_true', help='if true, use relabel results')
     parser.add_argument('--parallel', dest='parallel', default=False, action='store_true', help='if true, use parallel results')
     parser.add_argument('--use_bmm', dest='use_bmm', default=False, action='store_true', help='if true, create sets based on a bmm model')
     parser.add_argument('--double_run', dest='double_run', default=False, action='store_true', help='if true, run experiment twice')
@@ -101,11 +103,16 @@ def data_config(args, transform_train, transform_test,device):
         
         forget_arr_name = "forget_" + str(args.noise_ratio) + "_" + str(args.noise_type) + "_" + str(args.dataset)
         forget_arr = np.load("accuracy_measures/" + forget_arr_name + ".npy")
-        if args.f_l:
-            metrics.append(forget_arr[1])
+        if not args.f_FND:
+            if args.f_l:
+                metrics.append(forget_arr[1])
+            else:
+                metrics.append(forget_arr[0])
         else:
-            metrics.append(forget_arr[0])
-            
+            f_CE = forget_arr[0]
+            all_index = np.array(range(len(f_CE)))
+            B_sorted = bmm_probs(f_CE,all_index,device,indx_np=True)
+            args.fnd_fCE = B_sorted
             
     if args.relabel:
         relabel_arr_name = "relabel_" + str(args.noise_ratio) + "_" + str(args.noise_type) + "_" + str(args.dataset)
