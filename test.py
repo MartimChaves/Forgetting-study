@@ -88,10 +88,26 @@ def main_hist():
     t_dFN_lce = np.asarray(t_dFN_lce)
     x = np.asarray(x)
     
-    plt.plot(x,t_dFN,'r',x,p_r,'c',x,t_dFN_lce,'g',x,p_r_lce,'k')
+    plt.plot(x,t_dFN,'r',label="False negatives (CE - Forgetting)")
+    plt.plot(x,p_r,'c',label="Total samples removed (CE - Forgetting)")
+    plt.plot(x,t_dFN_lce,'g',label="False negatives (Loss - Forgetting)")
+    plt.plot(x,p_r_lce,'k',label="Total samples removed (Loss - Forgetting)")
+    plt.xlabel('Probability Threshold')
+    plt.ylabel('Number of samples removed')
+    plt.title('Relation between number of samples removed and probability (from bmm) threshold')
+    plt.legend(loc="upper right")
     plt.show()
     
-    plt.plot(x,t_dFN/1138,'r',x,p_r/38701,'c',x,t_dFN_lce/1138,'g',x,p_r_lce/38701,'k')
+    #plt.plot(x,t_dFN/1138,'r',x,(p_r-t_dFN)/38701,'c',x,t_dFN_lce/1138,'g',x,(p_r_lce-t_dFN_lce)/38701,'k')
+    
+    plt.plot(x,t_dFN/1138,'r',label="Percentage of False negatives (CE - Forgetting)")
+    plt.plot(x,(p_r-t_dFN)/38701,'c',label="Percentage of True negatives removed (CE - Forgetting)")
+    plt.plot(x,t_dFN_lce/1138,'g',label="Percentage of False negatives (Loss - Forgetting)")
+    plt.plot(x,(p_r_lce-t_dFN_lce)/38701,'k',label="Percentage of True negatives removed (Loss - Forgetting)")
+    plt.xlabel('Probability Threshold')
+    plt.ylabel('Number of samples removed')
+    plt.title('Relation between number of samples removed and probability (from bmm) threshold')
+    plt.legend(loc="upper right")
     plt.show()
     
     
