@@ -51,13 +51,14 @@ def recreate_image(im_as_var):
 
 np.random.seed(1)
 
+# Manually chose model path
 model_base = "cifar10_epoch_152_alldata_lr_0.1.pth"
 model_forget = "cifar10_epoch_152_alldata_lr_0.1_layer1.pth"
 
 model = mod.PreActResNet18(num_classes_first_stage=10,num_classes_second_stage=10)
 model.load_state_dict(torch.load(model_forget))
 
-
+# Manually select filters
 for j in range(0,64,8):
     random_img = np.uint8(np.random.uniform(150, 180, (32, 32, 3)))
 
@@ -84,8 +85,8 @@ for j in range(0,64,8):
         #out = model.layer3(out)
         
         conv_output = out[0,j]
-        # Loss function is the mean of the output of the selected layer/filter
-        # We try to minimize the mean of the output of that specific filter
+        # Loss function is symmetric of the mean of the output of the selected layer/filter
+        # We try to maximize the mean of the output of that specific filter
         loss = -torch.mean(conv_output)
         # Backward
         loss.backward()

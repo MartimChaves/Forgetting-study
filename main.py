@@ -1,6 +1,7 @@
 import faiss
 import os
-os.chdir("/home/martim/Documents/work_insight/study_forgetting_v2")
+
+# os.chdir("/home/martim/Documents/work_insight/study_forgetting_v2")
 
 import numpy as np
 import argparse
@@ -117,7 +118,12 @@ def data_config(data_name, first_stage = True):
         train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
         test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, num_workers=0, pin_memory=True)
         
-        os.chdir("/home/martim/Documents/work_insight/study_forgetting_v2")
+        try:
+            os.chdir("../..")
+        except:
+            # If relative path is not working use absulte path
+            os.chdir("/home/martim/Documents/work_insight/study_forgetting_v2")
+
         print("Cifar10 data loaded.")
                 
     
@@ -137,7 +143,11 @@ def data_config(data_name, first_stage = True):
         train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
         test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, num_workers=0, pin_memory=True)
         
-        os.chdir("/home/martim/Documents/work_insight/study_forgetting_v2")
+        try:
+            os.chdir("../..")
+        except:
+            # If relative path is not working use absulte path
+            os.chdir("/home/martim/Documents/work_insight/study_forgetting_v2")
     
     elif data_name == 'cifar100':
         print("Loading cifar100 data.")
@@ -153,7 +163,11 @@ def data_config(data_name, first_stage = True):
         train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
         test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, num_workers=0, pin_memory=True)
         
-        os.chdir("/home/martim/Documents/work_insight/study_forgetting_v2")
+        try:
+            os.chdir("../..")
+        except:
+            # If relative path is not working use absulte path
+            os.chdir("/home/martim/Documents/work_insight/study_forgetting_v2")
     
     else:
         print("Dataset not recognized. Please chose between cifar10 and svhn datasets")

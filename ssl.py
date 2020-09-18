@@ -264,28 +264,6 @@ def main(args):#, dst_folder):
             graph_measures(exp_name,'Epoch','Loss',clean_measures,noisy_measures,noisy_labels,args.experiment_name + '_2nd_ssl')
                 
         save_info = save_info_update(args,save_info,percent_clean,nImgs,top1_train_ac)
-        
-    # # write to a text file accuracy values
-    # save_info = "th_"
-    # # % of chosen images
-    # save_info = save_info + str(args.threshold) + "_percentClean_" + str(percent_clean) + "_noImages_" + str(nImgs) + "_"
-    # # agree
-    # if args.agree_on_clean:
-    #     save_info = save_info + "agreeOnClean" + "_"
-    # # balanced set
-    # if args.balanced_set:
-    #     save_info = save_info + "balancedSet" + "_"
-    # # forget
-    # if args.forget:
-    #     save_info = save_info + "forget" + "_"
-    # # relabel
-    # if args.relabel:
-    #     save_info = save_info + "relabel" + "_"
-    # # parallel
-    # if args.parallel:
-    #     save_info = save_info + "parallel" + "_"
-    
-    # save_info = save_info + "accRes_" + str(round(top1_train_ac,5)) 
     
     #plot roc curve here
     

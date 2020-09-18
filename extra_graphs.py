@@ -50,7 +50,7 @@ def main_hist():
     false_neg = noisy_indxs[np.where(np.isin(noisy_indxs,clean_relabel_indxs)==True)[0]]
     
     plt_hist(B_f_l,B_f_l,0,1,100,ylabel="Log(Number of samples)")
-    #plt_hist(B_sorted_f[false_neg],B_sorted_f[false_neg],0,1,100,ylabel="Log(Number of samples)")
+    # plt_hist(B_sorted_f[false_neg],B_sorted_f[false_neg],0,1,100,ylabel="Log(Number of samples)")
     # plt_hist(B_sorted,0,1,100,ylabel="Log(Number of samples)")
     # plt_hist(B_sorted,0,1,100,log=False)
     

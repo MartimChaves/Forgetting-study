@@ -14,34 +14,40 @@ def parse_args():
 
 def main(args):
 
-    array_name = "forget_" + str(args.noise_ratio) + "_" + str(args.noise_type) + "_" + str(args.dataset)
-    loss_ce_cifar100 = np.load("accuracy_measures/" + array_name + ".npy")
+    # *** Manually select files to be read ***
+    
+    # array_name = "forget_" + str(args.noise_ratio) + "_" + str(args.noise_type) + "_" + str(args.dataset)
+    # loss_ce_cifar100 = np.load("accuracy_measures/" + array_name + ".npy")
 
-    loss_cifar100 = loss_ce_cifar100[1]
-    ce_cifar100 = loss_ce_cifar100[0]
+    # loss_cifar100 = loss_ce_cifar100[1]
+    # ce_cifar100 = loss_ce_cifar100[0]
     
-    loss_cifar100_si = np.argsort(loss_cifar100)
-    ce_cifar100_si = np.argsort(ce_cifar100)
+    # loss_cifar100_si = np.argsort(loss_cifar100)
+    # ce_cifar100_si = np.argsort(ce_cifar100)
     
-    array_name += "_svhn"
-    loss_ce_svhn = np.load("accuracy_measures/" + array_name + ".npy")
+    # array_name += "_svhn"
+    # loss_ce_svhn = np.load("accuracy_measures/" + array_name + ".npy")
     
-    loss_svhn = loss_ce_svhn[1]
-    ce_svhn = loss_ce_svhn[0]
+    # loss_svhn = loss_ce_svhn[1]
+    # ce_svhn = loss_ce_svhn[0]
 
-    loss_svhn_si = np.argsort(loss_svhn)
-    ce_svhn_si = np.argsort(ce_svhn)
+    # loss_svhn_si = np.argsort(loss_svhn)
+    # ce_svhn_si = np.argsort(ce_svhn)
     
     x = np.arange(0,49999,1)
+    
+    loss_cifar100_si = np.random.permutation(50000)
+    ce_cifar100_si = np.random.permutation(50000)
     
     iou_loss = []
     iou_ce = []
     for th in range(1,50000):
         indxs_loss_iou = iou(loss_cifar100_si,ce_cifar100_si,th)#,loss_svhn_si,th)
-        indxs_ce_iou = iou(ce_svhn_si,loss_svhn_si,th)#,ce_svhn_si,th)
+        #indxs_ce_iou = iou(ce_svhn_si,loss_svhn_si,th)#,ce_svhn_si,th)
         
         iou_loss.append(indxs_loss_iou)
-        iou_ce.append(indxs_ce_iou)
+        #iou_ce.append(indxs_ce_iou)
+        iou_ce.append(indxs_loss_iou)
     
     # save table
     # print("Thresholds:",ths)
