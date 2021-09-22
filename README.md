@@ -1,5 +1,5 @@
 # INSIGHT work - Studying how a network forgets 
-Code developed at INSIGHT with the aim of further understanding how a neural network forgets and using that in the context of noisy label learning.
+Code developed at INSIGHT with the aim of further understanding how a neural network forgets, and using that in the context of noisy label learning.
 
 ## Requirements
 ```
@@ -22,7 +22,7 @@ python3 parallel.py --M 40 --M 80 --epoch_1st 151 --first_stage_data_name "cifar
 
 ### Relabel method
 
-Code taken from [here](https://github.com/EricArazo/PseudoLabeling) (thanks you!).
+Code taken from [here](https://github.com/EricArazo/PseudoLabeling) (thank you!).
 
 ```
 python3 relabel.py --lr_2nd 0.1  --M 75 --M 110 --epoch_1st 130 --warmup_e 70 --experiment_name cifar100_relabel_4_ssl --first_stage_data_name "cifar100" --first_stage_noise_type "random_in_noise" --first_stage_num_classes 100
@@ -30,7 +30,7 @@ python3 relabel.py --lr_2nd 0.1  --M 75 --M 110 --epoch_1st 130 --warmup_e 70 --
 
 ## Noisy label learning
 ### Semi supervised learning (SSL)
-Code taken from [here](https://github.com/EricArazo/PseudoLabeling) (thanks you!).
+Code taken from [here](https://github.com/EricArazo/PseudoLabeling) (thank you!).
 ```
 python3 ssl.py --epoch 400 --epoch_begin 10 --M 250 --M 350 --forget --experiment_name ssl_cifar10ranForget --train_root "./datasets/cifar10/data" --num_classes 10 --dataset "cifar10" --use_bmm --double_run --noise_type "random_in_noise"
 ```
